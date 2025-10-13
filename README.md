@@ -1,5 +1,3 @@
-Sure! Here’s the full README content directly in **Markdown**, ready to save as `README.md`:
-
 ---
 
 
