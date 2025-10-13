@@ -2,7 +2,7 @@ Sure! Here’s the full README content directly in **Markdown**, ready to save a
 
 ---
 
-```markdown
+
 # Kimai MCP Server
 
 A **Model Context Protocol (MCP)** server that connects to your Kimai instance to list, create, and manage activities and projects directly from Claude Desktop.
