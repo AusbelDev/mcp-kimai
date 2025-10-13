@@ -104,13 +104,29 @@ async def patch_json(client, path, body=None, params=None):
 # === FORMATTING HELPERS ===
 def fmt_activity_row(a):
     """Render one activity line."""
+    if not isinstance(a, dict):
+        return f"- [unexpected item: {a}]"
+
     aid = a.get("id", "n/a")
     name = a.get("name", "n/a")
-    proj = a.get("project", {}) or {}
-    pid = proj.get("id", "")
-    pnm = proj.get("name", "")
+
+    # project can be an int ID or an embedded object
+    proj = a.get("project")
+    if isinstance(proj, dict):
+        pid = proj.get("id", "")
+        pnm = proj.get("name", "")
+    elif isinstance(proj, int):
+        pid = proj
+        pnm = ""
+    else:
+        pid = str(proj) if proj not in (None, "") else ""
+        pnm = ""
+
     vis = a.get("visible", True)
-    return f"- #{aid} • {name} • project:{pid or '—'} {pnm or ''} • visible:{1 if vis else 0}"
+    vis_flag = 1 if str(vis).lower() in ("1", "true") or vis is True else 0
+
+    return f"- #{aid} • {name} • project:{pid or '—'} {pnm or ''} • visible:{vis_flag}"
+
 
 def parse_bool_flag(val):
     """Parse a visibility flag string to bool or None."""
@@ -342,34 +358,78 @@ async def kimai_list_projects(term: str = "", customer: str = "", visible: str =
         params = {}
         if term.strip():
             params["term"] = term.strip()
-        cid = parse_int_or_empty(customer)
-        if cid != "":
-            params["customer"] = str(cid)
+
+        # customer can be int; stringify only if valid
+        cid_filter = parse_int_or_empty(customer)
+        if cid_filter != "":
+            params["customer"] = str(cid_filter)
+
+        # visible: map truthy to 1 (visible) / 2 (hidden)
         vis_flag = parse_bool_flag(visible)
         if vis_flag is not None:
             params["visible"] = "1" if vis_flag else "2"
+
         async with httpx.AsyncClient() as client:
             j, err = await get_json(client, "/api/projects", params=params)
             if err:
                 return err
-            rows = []
+
+            # Normalize payload to a list of project dicts
+            items = []
             if isinstance(j, list):
-                for p in j:
-                    logger.info(f"Project raw: {p}")
+                items = j
+            elif isinstance(j, dict):
+                # Some installs might wrap results; try common containers
+                if "data" in j and isinstance(j["data"], list):
+                    items = j["data"]
+                else:
+                    items = [j]
+            else:
+                return "⚠️ Unexpected response format from /api/projects"
+
+            rows = []
+            for p in items:
+                try:
+                    # Some serializers nest under "project"
+                    proj = p.get("project") if isinstance(p, dict) else None
+                    if isinstance(proj, dict):
+                        p = proj
+
+                    if not isinstance(p, dict):
+                        logger.info(f"Skipping non-dict project item: {p}")
+                        continue
+
                     pid = p.get("id", "n/a")
                     name = p.get("name", "n/a")
-                    cust = p.get("customer", {}) or {}
-                    cid = cust.get("id", "")
-                    cnm = cust.get("name", "")
+
+                    # customer can be int ID or embedded object
+                    cust = p.get("customer", {})
+                    if isinstance(cust, dict):
+                        cid = cust.get("id", "")
+                        cnm = cust.get("name", "")
+                    elif isinstance(cust, int):
+                        cid = cust
+                        cnm = ""
+                    else:
+                        # string or None
+                        cid = str(cust) if cust not in (None, "") else ""
+                        cnm = ""
+
                     vis = p.get("visible", True)
                     rows.append(f"- #{pid} • {name} • customer:{cid or '—'} {cnm or ''} • visible:{1 if vis else 0}")
+                except Exception as inner_e:
+                    logger.error(f"Project parse error: {inner_e}; raw={p}")
+                    continue
+
             if not rows:
                 return "⚠️ No projects found for given filters."
             header = f"📂 Projects ({len(rows)}) • fetched {now_utc_iso()}"
             return "\n".join([header, ""] + rows)
+
     except Exception as e:
         logger.error(f"kimai_list_projects error: {e}")
         return f"❌ Error: {str(e)}"
+
 
 # === SERVER STARTUP ===
 if __name__ == "__main__":
