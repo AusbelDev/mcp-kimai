@@ -24,4 +24,4 @@ RUN useradd -m -u 1000 mcpuser && \
 USER mcpuser
 
 # Run the server
-CMD ["python", "kimai_server.py"]
+CMD ["python", "kimai_server_docker.py"]
