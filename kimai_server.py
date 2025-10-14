@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Simple Kimai MCP Server - Manage and list Kimai activities via REST API.
+Simple Kimai MCP Server - Manage and list Kimai via REST API.
 """
+
 import os
 import sys
 import logging
@@ -12,8 +13,8 @@ from mcp.server.fastmcp import FastMCP
 # Configure logging to stderr
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stderr
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stderr,
 )
 logger = logging.getLogger("kimai-server")
 
@@ -25,9 +26,11 @@ DEFAULT_BASE_URL = "https://kimai.mindfactory.com.mx"
 KIMAI_BASE_URL = os.environ.get("KIMAI_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
 KIMAI_TOKEN = os.environ.get("KIMAI_TOKEN", "")
 
+
 def now_utc_iso():
     """Return ISO8601 timestamp in UTC."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
 
 def auth_headers():
     """Return headers for Kimai X-AUTH-USER / X-AUTH-TOKEN authentication."""
@@ -37,14 +40,21 @@ def auth_headers():
         return {}
     return {"X-AUTH-USER": user, "X-AUTH-TOKEN": token}
 
+
 def base_url():
     """Return configured Kimai base URL without trailing slash."""
-    return (os.environ.get("KIMAI_BASE_URL", KIMAI_BASE_URL) or DEFAULT_BASE_URL).rstrip("/")
+    return (
+        os.environ.get("KIMAI_BASE_URL", KIMAI_BASE_URL) or DEFAULT_BASE_URL
+    ).rstrip("/")
+
 
 def missing_token_msg():
     """Return a friendly message if API token is missing."""
-    return ("❌ Error: KIMAI_API_TOKEN is not set. "
-            "Create an API token in your Kimai profile and pass it as a Docker secret/env.")
+    return (
+        "❌ Error: KIMAI_API_TOKEN is not set. "
+        "Create an API token in your Kimai profile and pass it as a Docker secret/env."
+    )
+
 
 # === LOW-LEVEL HTTP HELPERS ===
 async def get_json(client, path, params=None):
@@ -53,7 +63,9 @@ async def get_json(client, path, params=None):
         return None, missing_token_msg()
     url = f"{base_url()}{path}"
     try:
-        r = await client.get(url, headers=auth_headers(), params=params or {}, timeout=15)
+        r = await client.get(
+            url, headers=auth_headers(), params=params or {}, timeout=15
+        )
         r.raise_for_status()
         return r.json(), ""
     except httpx.HTTPStatusError as e:
@@ -65,13 +77,20 @@ async def get_json(client, path, params=None):
     except Exception as e:
         return None, f"❌ Network Error on GET {path}: {str(e)}"
 
+
 async def post_json(client, path, body=None, params=None):
     """Perform a POST and return JSON with friendly errors."""
     if not (KIMAI_TOKEN or "").strip():
         return None, missing_token_msg()
     url = f"{base_url()}{path}"
     try:
-        r = await client.post(url, headers=auth_headers(), json=body or {}, params=params or {}, timeout=20)
+        r = await client.post(
+            url,
+            headers=auth_headers(),
+            json=body or {},
+            params=params or {},
+            timeout=20,
+        )
         r.raise_for_status()
         return r.json(), ""
     except httpx.HTTPStatusError as e:
@@ -83,13 +102,20 @@ async def post_json(client, path, body=None, params=None):
     except Exception as e:
         return None, f"❌ Network Error on POST {path}: {str(e)}"
 
+
 async def patch_json(client, path, body=None, params=None):
     """Perform a PATCH and return JSON with friendly errors."""
     if not (KIMAI_TOKEN or "").strip():
         return None, missing_token_msg()
     url = f"{base_url()}{path}"
     try:
-        r = await client.patch(url, headers=auth_headers(), json=body or {}, params=params or {}, timeout=20)
+        r = await client.patch(
+            url,
+            headers=auth_headers(),
+            json=body or {},
+            params=params or {},
+            timeout=20,
+        )
         r.raise_for_status()
         return r.json(), ""
     except httpx.HTTPStatusError as e:
@@ -100,6 +126,7 @@ async def patch_json(client, path, body=None, params=None):
         return None, f"❌ API Error {e.response.status_code} on PATCH {path}: {detail}"
     except Exception as e:
         return None, f"❌ Network Error on PATCH {path}: {str(e)}"
+
 
 # === FORMATTING HELPERS ===
 def fmt_activity_row(a):
@@ -137,6 +164,7 @@ def parse_bool_flag(val):
         return False
     return None
 
+
 def parse_int_or_empty(s):
     """Parse int from string or return empty string if invalid."""
     try:
@@ -144,7 +172,9 @@ def parse_int_or_empty(s):
     except Exception:
         return ""
 
+
 # === MCP TOOLS ===
+
 
 @mcp.tool()
 async def kimai_ping() -> str:
@@ -160,6 +190,7 @@ async def kimai_ping() -> str:
         logger.error(f"kimai_ping error: {e}")
         return f"❌ Error: {str(e)}"
 
+
 @mcp.tool()
 async def kimai_version() -> str:
     """Get Kimai version info."""
@@ -174,10 +205,15 @@ async def kimai_version() -> str:
         logger.error(f"kimai_version error: {e}")
         return f"❌ Error: {str(e)}"
 
+
 @mcp.tool()
-async def kimai_list_activities(term: str = "", project: str = "", visible: str = "") -> str:
+async def kimai_list_activities(
+    term: str = "", project: str = "", visible: str = ""
+) -> str:
     """List activities filtered by optional term/project/visible."""
-    logger.info(f"kimai_list_activities term='{term}' project='{project}' visible='{visible}'")
+    logger.info(
+        f"kimai_list_activities term='{term}' project='{project}' visible='{visible}'"
+    )
     try:
         params = {}
         if term.strip():
@@ -197,7 +233,11 @@ async def kimai_list_activities(term: str = "", project: str = "", visible: str 
             if isinstance(j, list):
                 for item in j:
                     # try common shapes
-                    a = item.get("activity") if isinstance(item, dict) and "activity" in item else item
+                    a = (
+                        item.get("activity")
+                        if isinstance(item, dict) and "activity" in item
+                        else item
+                    )
                     if isinstance(a, dict):
                         rows.append(fmt_activity_row(a))
             elif isinstance(j, dict):
@@ -209,6 +249,7 @@ async def kimai_list_activities(term: str = "", project: str = "", visible: str 
     except Exception as e:
         logger.error(f"kimai_list_activities error: {e}")
         return f"❌ Error: {str(e)}"
+
 
 @mcp.tool()
 async def kimai_get_activity(id: str = "") -> str:
@@ -226,58 +267,11 @@ async def kimai_get_activity(id: str = "") -> str:
         logger.error(f"kimai_get_activity error: {e}")
         return f"❌ Error: {str(e)}"
 
-@mcp.tool()
-async def kimai_create_activity(name: str = "", project: str = "", visible: str = "1") -> str:
-    """Create a new activity (requires name; optional project, visible)."""
-    logger.info(f"kimai_create_activity name='{name}' project='{project}' visible='{visible}'")
-    if not name.strip():
-        return "❌ Error: name is required"
-    try:
-        body = {"name": name.strip()}
-        pid = parse_int_or_empty(project)
-        if pid != "":
-            body["project"] = pid
-        vis_flag = parse_bool_flag(visible)
-        if vis_flag is not None:
-            body["visible"] = 1 if vis_flag else 0
-        async with httpx.AsyncClient() as client:
-            j, err = await post_json(client, "/api/activities", body=body)
-            if err:
-                return err
-            return f"✅ Created activity:\n{j}"
-    except Exception as e:
-        logger.error(f"kimai_create_activity error: {e}")
-        return f"❌ Error: {str(e)}"
 
 @mcp.tool()
-async def kimai_update_activity(id: str = "", name: str = "", project: str = "", visible: str = "") -> str:
-    """Update an activity (any subset of name/project/visible)."""
-    logger.info(f"kimai_update_activity id='{id}' name='{name}' project='{project}' visible='{visible}'")
-    if not id.strip():
-        return "❌ Error: id is required"
-    try:
-        body = {}
-        if name.strip():
-            body["name"] = name.strip()
-        pid = parse_int_or_empty(project)
-        if pid != "":
-            body["project"] = pid
-        vis_flag = parse_bool_flag(visible)
-        if vis_flag is not None:
-            body["visible"] = 1 if vis_flag else 0
-        if not body:
-            return "⚠️ Nothing to update. Provide at least one of: name, project, visible."
-        async with httpx.AsyncClient() as client:
-            j, err = await patch_json(client, f"/api/activities/{id.strip()}", body=body)
-            if err:
-                return err
-            return f"✅ Updated activity #{id.strip()}:\n{j}"
-    except Exception as e:
-        logger.error(f"kimai_update_activity error: {e}")
-        return f"❌ Error: {str(e)}"
-
-@mcp.tool()
-async def kimai_set_activity_meta(id: str = "", meta_name: str = "", meta_value: str = "") -> str:
+async def kimai_set_activity_meta(
+    id: str = "", meta_name: str = "", meta_value: str = ""
+) -> str:
     """Set a configured meta-field on an activity."""
     logger.info(f"kimai_set_activity_meta id='{id}' name='{meta_name}'")
     if not id.strip():
@@ -287,14 +281,17 @@ async def kimai_set_activity_meta(id: str = "", meta_name: str = "", meta_value:
     try:
         body = {"name": meta_name.strip(), "value": meta_value}
         async with httpx.AsyncClient() as client:
-            j, err = await patch_json(client, f"/api/activities/{id.strip()}/meta", body=body)
+            j, err = await patch_json(
+                client, f"/api/activities/{id.strip()}/meta", body=body
+            )
             if err:
                 return err
             return f"✅ Set meta on activity #{id.strip()}:\n{j}"
     except Exception as e:
         logger.error(f"kimai_set_activity_meta error: {e}")
         return f"❌ Error: {str(e)}"
-    
+
+
 @mcp.tool()
 async def kimai_list_customers(term: str = "") -> str:
     """List customers filtered by optional term."""
@@ -321,10 +318,20 @@ async def kimai_list_customers(term: str = "") -> str:
         logger.error(f"kimai_list_customers error: {e}")
         return f"❌ Error: {str(e)}"
 
+
 @mcp.tool()
-async def kimai_create_timesheet(activity: str = "", begin: str = "", end: str = "", description: str = "", customer: str = "", project: str = "") -> str:
+async def kimai_create_timesheet(
+    activity: str = "",
+    begin: str = "",
+    end: str = "",
+    description: str = "",
+    customer: str = "",
+    project: str = "",
+) -> str:
     """Create a new timesheet entry (requires activity, begin; optional end, description, customer, project)."""
-    logger.info(f"kimai_create_timesheet activity='{activity}' begin='{begin}' end='{end}' customer='{customer}' project='{project}'")
+    logger.info(
+        f"kimai_create_timesheet activity='{activity}' begin='{begin}' end='{end}' customer='{customer}' project='{project}'"
+    )
     if not activity.strip():
         return "❌ Error: activity is required"
     if not begin.strip():
@@ -349,11 +356,112 @@ async def kimai_create_timesheet(activity: str = "", begin: str = "", end: str =
     except Exception as e:
         logger.error(f"kimai_create_timesheet error: {e}")
         return f"❌ Error: {str(e)}"
-    
+
+
 @mcp.tool()
-async def kimai_list_projects(term: str = "", customer: str = "", visible: str = "") -> str:
+async def kimai_list_timesheets(
+    customer: str = "",
+    project: str = "",
+    begin: str = "",
+    end: str = "",
+    term: str = "",
+) -> str:
+    """List timesheets filtered by optional customer/project/begin/end/term."""
+    logger.info(
+        f"kimai_list_timesheets customer='{customer}' project='{project}' begin='{begin}' end='{end}' term='{term}'"
+    )
+    try:
+        params = {}
+        cid = parse_int_or_empty(customer)
+        if cid != "":
+            params["customer"] = str(cid)
+        pid = parse_int_or_empty(project)
+        if pid != "":
+            params["project"] = str(pid)
+        if begin.strip():
+            params["begin"] = begin.strip()
+        if end.strip():
+            params["end"] = end.strip()
+        if term.strip():
+            params["term"] = term.strip()
+        async with httpx.AsyncClient() as client:
+            j, err = await get_json(client, "/api/timesheets", params=params)
+            if err:
+                return err
+            rows = []
+            if isinstance(j, list):
+                for t in j:
+                    tid = t.get("id", "n/a")
+                    desc = t.get("description", "n/a")
+                    act = t.get("activity", {})
+                    act_name = (
+                        act.get("name", "n/a") if isinstance(act, dict) else str(act)
+                    )
+                    begin_time = t.get("begin", "n/a")
+                    end_time = t.get("end", "n/a")
+                    rows.append(
+                        f"- #{tid} • {desc} • activity:{act_name} • {begin_time} to {end_time}"
+                    )
+            if not rows:
+                return "⚠️ No timesheets found for given filters."
+            header = f"⏱️ Timesheets ({len(rows)}) • fetched {now_utc_iso()}"
+            return "\n".join([header, ""] + rows)
+    except Exception as e:
+        logger.error(f"kimai_list_timesheets error: {e}")
+        return f"❌ Error: {str(e)}"
+
+
+@mcp.tool()
+async def kimai_update_timesheet(id: str = "", body: str = "") -> str:
+    """Update a timesheet entry by ID with a JSON body.
+            Example:
+
+                {
+          "begin": "2025-10-10T15:47:52",
+          "end": "2025-10-10T15:47:52",
+          "project": 0,
+          "activity": 0,
+          "description": "string",
+          "fixedRate": 0,
+          "hourlyRate": 0,
+          "user": 0,
+          "exported": true,
+          "billable": true,
+          "tags": "string"
+    }
+    """
+    logger.info(f"kimai_update_timesheet id='{id}' body='{body}'")
+    if not id.strip():
+        return "❌ Error: id is required"
+    if not body.strip():
+        return "❌ Error: body is required"
+    try:
+        import json
+
+        body_json = json.loads(body)
+    except Exception as e:
+        return f"❌ Error: invalid JSON body: {str(e)}"
+    try:
+        async with httpx.AsyncClient() as client:
+            j, err = await patch_json(
+                client, f"/api/timesheets/{id.strip()}", body=body_json
+            )
+            if err:
+                return err
+            return f"✅ Updated timesheet entry #{id.strip()}:\n{j}"
+    except Exception as e:
+        logger.error(f"kimai_update_timesheet error: {e}")
+        return f"❌ Error: {str(e)}"
+
+
+@mcp.tool()
+async def kimai_list_projects(
+    term: str = "", customer: str = "", visible: str = ""
+) -> str:
     """List projects filtered by optional term/customer/visible."""
-    logger.info(f"kimai_list_projects term='{term}' customer='{customer}' visible='{visible}'")
+    logger.info(
+        f"kimai_list_projects term='{term}' customer='{customer}' visible='{visible}'"
+    )
     try:
         params = {}
         if term.strip():
@@ -416,7 +524,9 @@ async def kimai_list_projects(term: str = "", customer: str = "", visible: str =
                         cnm = ""
 
                     vis = p.get("visible", True)
-                    rows.append(f"- #{pid} • {name} • customer:{cid or '—'} {cnm or ''} • visible:{1 if vis else 0}")
+                    rows.append(
+                        f"- #{pid} • {name} • customer:{cid or '—'} {cnm or ''} • visible:{1 if vis else 0}"
+                    )
                 except Exception as inner_e:
                     logger.error(f"Project parse error: {inner_e}; raw={p}")
                     continue
@@ -435,9 +545,11 @@ async def kimai_list_projects(term: str = "", customer: str = "", visible: str =
 if __name__ == "__main__":
     logger.info("Starting Kimai MCP server...")
     if not (KIMAI_TOKEN or "").strip():
-        logger.warning("KIMAI_API_TOKEN not set; tools will return a friendly error until provided.")
+        logger.warning(
+            "KIMAI_API_TOKEN not set; tools will return a friendly error until provided."
+        )
     try:
-        mcp.run(transport='stdio')
+        mcp.run(transport="stdio")
     except Exception as e:
         logger.error(f"Server error: {e}", exc_info=True)
         sys.exit(1)
