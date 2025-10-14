@@ -8,7 +8,7 @@ import sys
 import logging
 from datetime import datetime, timezone
 import httpx
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 # Configure logging to stderr
 logging.basicConfig(
@@ -549,7 +549,7 @@ if __name__ == "__main__":
             "KIMAI_API_TOKEN not set; tools will return a friendly error until provided."
         )
     try:
-        mcp.run(transport="stdio")
+        mcp.run(transport="http", port=8000)
     except Exception as e:
         logger.error(f"Server error: {e}", exc_info=True)
         sys.exit(1)
