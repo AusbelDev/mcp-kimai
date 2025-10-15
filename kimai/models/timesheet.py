@@ -1,9 +1,11 @@
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_serializer, model_validator
 from datetime import datetime
 
 from kimai.models.misc import KimaiMetaPairValue
 
+# TODO: Again, find a way to map camelCase to snake_case
+# Hint: Use Pydantic Config (?)
 class KimaiTimesheetEntity(BaseModel):
   activity: Optional[int] = None
   project: Optional[int] = None
@@ -14,13 +16,13 @@ class KimaiTimesheetEntity(BaseModel):
   end: Optional[datetime] = None
   duration: Optional[int] = None
   description: Optional[str] = None
-  rate: Optional[int] = None
-  internal_rate: Optional[int] = None
-  fixed_rate: Optional[int] = None
-  hourly_rate: Optional[int] = None
+  rate: Optional[float] = None
+  internalRate: Optional[float] = None
+  fixedRate: Optional[int] = None
+  hourlyRate: Optional[float] = None
   exported: bool
   billable: bool
-  meta_fields: List[KimaiMetaPairValue] = []
+  metaFields: List[KimaiMetaPairValue] = []
 
 class KimaiTimesheetCollection(BaseModel):
   activity: Optional[int] = None
@@ -57,28 +59,22 @@ class KimaiTimesheetCollectionDetails(BaseModel):
 
 class KimaiTimesheet(BaseModel):
   begin: datetime
-  end: datetime
+  end: Optional[datetime] = None
   project: int
   activity: int
-  description: str
-  fixed_rate: int
-  hourly_rate: int
-  user: int
-  exported: bool
-  billable: bool
-  tags: List[str]
+  description: Optional[str] = None
+  fixedRate: Optional[str] = None
+  hourlyRate: Optional[str] = None
+  user: Optional[int] = None
+  exported: Optional[bool] = None
+  billable: Optional[bool] = None
+  tags: List[str] = []
 
-  def format_to_submit(self) -> Dict[str, Any]:
-    return {
-      "begin": self.begin.isoformat(),
-      "end": self.end.isoformat(),
-      "project": self.project,
-      "activity": self.activity,
-      "description": self.description,
-      "fixedRate": self.fixed_rate,
-      "hourlyRate": self.hourly_rate,
-      "user": self.user,
-      "exported": self.exported,
-      "billable": self.billable,
-      "tags": ",".join(self.tags)
-    }
+  @field_serializer('tags')
+  def join_tags(self, value) -> str:
+    return ",".join(value)
+
+  @field_serializer('begin', 'end')
+  def datetimes_to_iso(self, value: Optional[datetime]) -> Optional[str]:
+    if(value): return value.isoformat()
+    return None

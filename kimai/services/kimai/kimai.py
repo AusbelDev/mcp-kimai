@@ -1,12 +1,11 @@
 import requests
-import json
 import os
 
 from typing import Any, List, Optional
 
 from kimai.models.project import KimaiProjectCollection
 from kimai.models.request import KimaiRequestHeaders
-from kimai.models.timesheet import KimaiTimesheetCollection, KimaiTimesheetCollectionDetails, KimaiTimesheetEntity
+from kimai.models.timesheet import KimaiTimesheet, KimaiTimesheetCollection, KimaiTimesheetCollectionDetails, KimaiTimesheetEntity
 from kimai.models.user import KimaiUser
 
 class KimaiService:
@@ -104,3 +103,47 @@ class KimaiService:
     response_data = response.json()
 
     return [KimaiProjectCollection(**project) for project in response_data]
+
+  def create_timesheet(self, timesheet: KimaiTimesheet) -> KimaiTimesheetEntity:
+    url = f'{self.__api_url}/timesheets'
+
+    response = requests.post(
+      url,
+      headers = self.__request_headers.as_headers(),
+      json = timesheet.model_dump(exclude_none = True)
+    )
+    # print(timesheet.model_dump(exclude_none = True))
+    # print(response.request.headers)
+    # print(response.request.body)
+
+    response.raise_for_status()
+    response_data = response.json()
+
+    return KimaiTimesheetEntity(**response_data)
+
+  def update_timesheet(self, id: int, timesheet: KimaiTimesheet) -> KimaiTimesheetEntity:
+    url = f'{self.__api_url}/timesheets/{id}'
+
+    response = requests.patch(
+      url,
+      headers = self.__request_headers.as_headers(),
+      json = timesheet.model_dump(exclude_none = True)
+    )
+
+    response.raise_for_status()
+    response_data = response.json()
+
+    return KimaiTimesheetEntity(**response_data)
+
+  def delete_timesheet(self, id: int) -> None:
+    url = f'{self.__api_url}/timesheets/{id}'
+
+    response = requests.delete(
+      url,
+      headers = self.__request_headers.as_headers()
+    )
+
+    response.raise_for_status()
+
+    return None
+

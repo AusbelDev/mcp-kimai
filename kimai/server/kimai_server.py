@@ -1,7 +1,3 @@
-"""
-Simple Kimai MCP Server - Manage and list Kimai via REST API.
-"""
-
 import os
 import sys
 import logging
@@ -37,13 +33,11 @@ def auth_headers():
         return {}
     return {"X-AUTH-USER": user, "X-AUTH-TOKEN": token}
 
-
 def base_url():
     """Return configured Kimai base URL without trailing slash."""
     return (
         os.environ.get("KIMAI_BASE_URL", KIMAI_BASE_URL) or DEFAULT_BASE_URL
     ).rstrip("/")
-
 
 def missing_token_msg():
     """Return a friendly message if API token is missing."""
@@ -51,7 +45,6 @@ def missing_token_msg():
         "❌ Error: KIMAI_API_TOKEN is not set. "
         "Create an API token in your Kimai profile and pass it as a Docker secret/env."
     )
-
 
 # === LOW-LEVEL HTTP HELPERS ===
 async def get_json(client, path, params=None):
@@ -407,7 +400,6 @@ async def kimai_list_timesheets(
         logger.error(f"kimai_list_timesheets error: {e}")
         return f"❌ Error: {str(e)}"
 
-
 @mcp.tool()
 async def kimai_update_timesheet(id: str = "", body: str = "") -> str:
     """Update a timesheet entry by ID with a JSON body.
@@ -536,7 +528,6 @@ async def kimai_list_projects(
     except Exception as e:
         logger.error(f"kimai_list_projects error: {e}")
         return f"❌ Error: {str(e)}"
-
 
 # === SERVER STARTUP ===
 if __name__ == "__main__":

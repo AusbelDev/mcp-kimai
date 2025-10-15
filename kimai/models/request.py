@@ -5,20 +5,23 @@ from typing import Any
 class KimaiRequestHeaders:
   user_token: str
   user_password: str
+  cookies: str
 
   def __init__(self):
-    USER_USER = os.getenv("USER_USER")
-    USER_TOKEN = os.getenv("USER_TOKEN")
+    KIMAI_USER = os.getenv("KIMAI_USER")
+    KIMAI_TOKEN = os.getenv("KIMAI_TOKEN")
 
-    if(not(USER_USER and USER_TOKEN)):
+    if(not(KIMAI_USER and KIMAI_TOKEN)):
       raise Exception("Cannot instantiate headers without crucial data")
 
-    self.user_token = USER_USER
-    self.user_password = USER_TOKEN
+    self.user_token = KIMAI_USER
+    self.user_password = KIMAI_TOKEN
 
   def as_headers(self) -> Any:
     return {
+      'accept': 'application/json',
+      'Content-Type': 'application/json',
       'X-AUTH-USER': self.user_token,
-      'X-AUTH-USER': self.user_password
+      'X-AUTH-TOKEN': self.user_password
     }
 

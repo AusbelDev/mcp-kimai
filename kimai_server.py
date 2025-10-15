@@ -26,11 +26,9 @@ DEFAULT_BASE_URL = "https://kimai.mindfactory.com.mx"
 KIMAI_BASE_URL = os.environ.get("KIMAI_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
 KIMAI_TOKEN = os.environ.get("KIMAI_TOKEN", "")
 
-
 def now_utc_iso():
     """Return ISO8601 timestamp in UTC."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
 
 def auth_headers():
     """Return headers for Kimai X-AUTH-USER / X-AUTH-TOKEN authentication."""
@@ -185,7 +183,7 @@ async def kimai_ping() -> str:
             j, err = await get_json(client, "/api/ping")
             if err:
                 return err
-            return f"✅ kimai_ping OK at {now_utc_iso()} • Response: {str(j)}"
+            return f"✅ kimai_ping OK at {datetime.now().isoformat()} • Response: {str(j)}"
     except Exception as e:
         logger.error(f"kimai_ping error: {e}")
         return f"❌ Error: {str(e)}"
