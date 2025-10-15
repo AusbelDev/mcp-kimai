@@ -16,12 +16,12 @@ class KimaiService:
   __instance: Optional[Any] = None
 
   def __init__(self):
-    KIMAI_API_URL = os.getenv("KIMAI_API_URL")
+    KIMAI_BASE_URL = os.getenv("KIMAI_BASE_URL")
 
-    if(not KIMAI_API_URL):
+    if(not KIMAI_BASE_URL):
       raise Exception("Cannot instantiate service without crucial data")
 
-    self.__api_url = KIMAI_API_URL
+    self.__api_url = KIMAI_BASE_URL
     self.__request_headers = KimaiRequestHeaders()
 
   @classmethod
@@ -35,6 +35,8 @@ class KimaiService:
     self.__api_url = url
     return
 
+  # TODO: Use models for returning type
+  # WARNING: Doesn't work, returns 403 (forbidden)
   def get_users(self) -> List[KimaiUser]:
     url = f'{self.__api_url}/users/'
     response = requests.get(url, headers = self.__request_headers.as_headers())

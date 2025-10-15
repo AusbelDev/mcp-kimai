@@ -22,7 +22,6 @@ class KimaiTimesheetEntity(BaseModel):
   billable: bool
   meta_fields: List[KimaiMetaPairValue] = []
 
-
 class KimaiTimesheetCollection(BaseModel):
   activity: Optional[int] = None
   project: Optional[int] = None

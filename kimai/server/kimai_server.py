@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Simple Kimai MCP Server - Manage and list Kimai via REST API.
 """
@@ -26,11 +25,9 @@ DEFAULT_BASE_URL = "https://kimai.mindfactory.com.mx"
 KIMAI_BASE_URL = os.environ.get("KIMAI_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
 KIMAI_TOKEN = os.environ.get("KIMAI_TOKEN", "")
 
-
 def now_utc_iso():
     """Return ISO8601 timestamp in UTC."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
 
 def auth_headers():
     """Return headers for Kimai X-AUTH-USER / X-AUTH-TOKEN authentication."""
