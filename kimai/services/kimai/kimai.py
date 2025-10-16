@@ -3,6 +3,9 @@ import os
 
 from typing import Any, List, Optional
 
+from kimai.models.activity import KimaiActivity, KimaiActivityEntity, KimaiActivityForm
+from kimai.models.customer import KimaiCustomer
+from kimai.models.misc import KimaiVersion
 from kimai.models.project import KimaiProjectCollection
 from kimai.models.request import KimaiRequestHeaders
 from kimai.models.timesheet import KimaiTimesheet, KimaiTimesheetCollection, KimaiTimesheetCollectionDetails, KimaiTimesheetEntity
@@ -30,9 +33,54 @@ class KimaiService:
     cls.__instance = KimaiService()
     return cls.__instance
 
-  def set_url(self, url: str) -> None:
-    self.__api_url = url
-    return
+  def version(self) -> KimaiVersion:
+    url = f'{self.__api_url}/version'
+
+    response = requests.get(url, headers = self.__request_headers.as_headers())
+    response.raise_for_status()
+
+    data = response.json()
+
+    return KimaiVersion(**data)
+
+  def ping(self) -> str:
+    url = f'{self.__api_url}/ping'
+
+    response = requests.get(url, headers = self.__request_headers.as_headers())
+    response.raise_for_status()
+
+    data = response.json()
+
+    return data.get('message')
+
+  def get_activities(self) -> List[KimaiActivity]:
+    url = f'{self.__api_url}/activities'
+
+    response = requests.get(url, headers = self.__request_headers.as_headers())
+    data = response.json()
+
+    return [KimaiActivity(**activity) for activity in data]
+
+  def get_activity(self, id: int) -> KimaiActivityEntity:
+    url = f'{self.__api_url}/activities/{id}'
+
+    response = requests.get(url, headers = self.__request_headers.as_headers())
+    data = response.json()
+
+    return KimaiActivityEntity(**data)
+
+  # WARNING: Doesn't work, returns 403 (forbidden)
+  def create_activity(self, activity: KimaiActivityForm) -> KimaiActivityEntity:
+    url = f'{self.__api_url}/activities/'
+
+    response = requests.post(
+      url,
+      headers = self.__request_headers.as_headers(),
+      json = activity.model_dump(exclude_none = True)
+    )
+    data = response.json()
+
+    return KimaiActivityEntity(**data)
 
   # TODO: Use models for returning type
   # WARNING: Doesn't work, returns 403 (forbidden)
@@ -43,6 +91,17 @@ class KimaiService:
     print(response.raise_for_status())
 
     return []
+
+  def get_customers(self) -> List[KimaiCustomer]:
+    url = f'{self.__api_url}/customers/'
+
+    response = requests.get(
+      url,
+      headers = self.__request_headers.as_headers()
+    )
+    data = response.json()
+
+    return [KimaiCustomer(**customer) for customer in data]
 
   def get_tags(self) -> List[str]:
     url = f'{self.__api_url}/tags/'
