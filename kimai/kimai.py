@@ -245,7 +245,7 @@ def context_download():
   """
   get_meta()
 
-@mcp.resource("kimai_context://kimai_activities")
+@mcp.resource("data://kimai_activities")
 def get_activities() -> List[KimaiActivity]:
   """
   Fetches Kimai activities locally if they exist. Else, they are requested and
@@ -261,7 +261,7 @@ def get_activities() -> List[KimaiActivity]:
 
   return activities
 
-@mcp.resource("kimai_context://kimai_customers")
+@mcp.resource("data://kimai_customers")
 def get_customers() -> List[KimaiCustomer]:
   """
   Fetches Kimai customers locally if they exist. Else, they are requested and
@@ -277,7 +277,7 @@ def get_customers() -> List[KimaiCustomer]:
 
   return customers
 
-@mcp.resource("kimai_context://kimai_tags")
+@mcp.resource("data://kimai_tags")
 def get_tags() -> List[str]:
   """
   Fetches Kimai tags locally if they exist. Else, they are requested and
@@ -293,7 +293,7 @@ def get_tags() -> List[str]:
 
   return tags
 
-@mcp.resource("kimai_context://kimai_timesheets")
+@mcp.resource("data://kimai_timesheets")
 def get_timesheets() -> List[KimaiTimesheet]:
   """
   Fetches Kimai timesheets locally if they exist. Else, they are requested and
@@ -309,7 +309,7 @@ def get_timesheets() -> List[KimaiTimesheet]:
 
   return timesheets
 
-@mcp.resource("kimai_context://kimai_projects")
+@mcp.resource("data://kimai_projects")
 def get_projects() -> List[KimaiProject]:
   """
   Fetches Kimai projects locally if they exist. Else, they are requested and
