@@ -9,7 +9,7 @@ A **Model Context Protocol (MCP)** server that connects to your Kimai instance t
 
 ## 🎯 Purpose
 
-This MCP server provides a simple bridge between Claude Desktop and your company’s **Kimai** time-tracking system (`https://kimai.mindfactory.com.mx/`), allowing you to:
+This MCP server provides a simple bridge between Claude Desktop and your company’s **Kimai** time-tracking system, allowing you to:
 
 - Browse activities and projects  
 - Create and edit activities  
