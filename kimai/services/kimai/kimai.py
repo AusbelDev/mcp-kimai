@@ -1,13 +1,13 @@
 import requests
 import os
 
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from kimai.models.activity import KimaiActivity, KimaiActivityEntity, KimaiActivityForm
 from kimai.models.customer import KimaiCustomer
 from kimai.models.misc import KimaiVersion
 from kimai.models.project import KimaiProjectCollection
-from kimai.models.request import IKimaiFetchActivitiesParams, KimaiRequestHeaders
+from kimai.models.request import IKimaiFetchActivitiesParams, IKimaiFetchRecentTimesheetsParams, IKimaiFetchTimesheetsParams, KimaiRequestHeaders
 from kimai.models.timesheet import KimaiTimesheet, KimaiTimesheetCollection, KimaiTimesheetCollectionDetails, KimaiTimesheetEntity
 from kimai.models.user import KimaiUser
 
@@ -68,7 +68,7 @@ class KimaiService:
 
     return data.get('message')
 
-  def get_activities(self, params: Optional[IKimaiFetchActivitiesParams] = None) -> List[KimaiActivity]:
+  def get_activities(self, params: Optional[Dict[str, Any]] = None) -> List[KimaiActivity]:
     """
       List available activities for the user.
 
@@ -80,11 +80,13 @@ class KimaiService:
       List[KimaiActivity]: A list of activities.
     """
     url = f'{self.__api_url}/activities'
+    valid_params = None
+    if(params): valid_params = IKimaiFetchActivitiesParams(**params)
 
     response = requests.get(
       url,
       headers = self.__request_headers.as_headers(),
-      params = params.model_dump(exclude_none = True) if params else None
+      params = valid_params.model_dump(exclude_none = True) if valid_params else None
     )
     response.raise_for_status()
 
@@ -151,8 +153,6 @@ class KimaiService:
     response = requests.get(url, headers = self.__request_headers.as_headers())
     response.raise_for_status()
 
-    print(response.raise_for_status())
-
     return []
 
   def get_customers(self) -> List[KimaiCustomer]:
@@ -189,7 +189,7 @@ class KimaiService:
     response_data = response.json()
     return response_data
 
-  def get_timesheets(self) -> List[KimaiTimesheetCollection]:
+  def get_timesheets(self, params: Optional[Dict[str, Any]] = None) -> List[KimaiTimesheetCollection]:
     """
       Fetches available timesheets for the current user.
 
@@ -197,8 +197,14 @@ class KimaiService:
       List[KimaiTimesheetCollection]: The list of available timesheets of the user.
     """
     url = f'{self.__api_url}/timesheets'
+    valid_params = None
+    if(params): valid_params = IKimaiFetchTimesheetsParams(**params)
 
-    response = requests.get(url, headers = self.__request_headers.as_headers())
+    response = requests.get(
+      url,
+      headers = self.__request_headers.as_headers(),
+      params = valid_params.model_dump(exclude_none = True) if valid_params else None
+    )
     response.raise_for_status()
 
     response_data = response.json()
@@ -222,7 +228,7 @@ class KimaiService:
 
     return KimaiTimesheetEntity(**response_data)
 
-  def get_recent_timesheets(self) -> List[KimaiTimesheetCollectionDetails]:
+  def get_recent_timesheets(self, params: Optional[Dict[str, Any]]) -> List[KimaiTimesheetCollectionDetails]:
     """
       Fetches the user's recent timesheets.
 
@@ -230,8 +236,14 @@ class KimaiService:
       List[KimaiTimesheetCollectionDetails] = A list of the recent timesheets.
     """
     url = f'{self.__api_url}/timesheets/recent'
+    valid_params = None
+    if(params): valid_params = IKimaiFetchRecentTimesheetsParams(**params)
 
-    response = requests.get(url, headers = self.__request_headers.as_headers())
+    response = requests.get(
+      url,
+      headers = self.__request_headers.as_headers(),
+      params = valid_params.model_dump(exclude_none = True) if valid_params else None
+    )
     response.raise_for_status()
 
     response_data = response.json()

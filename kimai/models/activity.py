@@ -2,6 +2,16 @@ from typing import Any, List, Optional
 from pydantic import BaseModel
 
 from kimai.models.misc import KimaiMetaPairValue
+from kimai.models.project import KimaiProject
+
+class KimaiActivityDetails(BaseModel):
+  id: Optional[int] = None
+  project: Optional[KimaiProject] = None
+  name: str
+  comment: Optional[str] = None
+  visible: bool
+  billable: bool
+  color: Optional[str] = None
 
 class KimaiActivityForm(BaseModel):
   name: str

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal, TypeAlias
 from pydantic import BaseModel
 
@@ -16,3 +17,6 @@ class KimaiVersion(BaseModel):
 class KimaiMetaPairValue(BaseModel):
   name: str
   value: str
+
+class MCPContextMeta(BaseModel):
+  last_update: datetime = datetime.now()

@@ -1,5 +1,4 @@
 FROM python:3.11-slim
-ENTRYPOINT ["tail", "-f", "/dev/null"]
 
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1

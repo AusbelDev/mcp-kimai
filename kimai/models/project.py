@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel
 
+from kimai.models.customer import KimaiProjectCustomer
 from kimai.models.misc import KimaiMetaPairValue
 # TODO: Find a way to add KimaiTeam to projects.
 # WARNING: If imported, it adds circular imports
@@ -23,7 +24,11 @@ class KimaiProjectCollection(BaseModel):
   color: Optional[str] = None
 
 class KimaiProject(BaseModel):
-  start: Optional[datetime] = None
-  end: Optional[datetime] = None
-  meta_fields: List[KimaiMetaPairValue] = []
-  # teams: KimaiTeam
+  customer: Optional[KimaiProjectCustomer] = None
+  id: Optional[int] = None
+  name: str
+  comment: Optional[str] = None
+  visible: bool
+  billable: bool
+  globalActivities: bool
+  color: Optional[str] = None

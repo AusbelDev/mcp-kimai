@@ -1,4 +1,5 @@
 .env
+mcp_context/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

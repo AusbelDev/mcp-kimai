@@ -1,6 +1,7 @@
+from datetime import datetime
 import os
 
-from typing import Any, List, Literal, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, field_serializer
 
@@ -39,5 +40,32 @@ class IKimaiFetchActivitiesParams(BaseModel):
   term: Optional[str] = None
 
   @field_serializer('projects')
+  def join_lists(self, value) -> str:
+    return ",".join(value)
+
+class IKimaiFetchRecentTimesheetsParams(BaseModel):
+  user: Optional[str] = None
+  begin: Optional[datetime] = None
+  size: Optional[int] = None
+
+class IKimaiFetchTimesheetsParams(BaseModel):
+  user: Optional[str] = None
+  customers: Optional[List[str]] = None
+  projects: Optional[List[str]] = None
+  activities: Optional[List[str]] = None
+  page: Optional[int] = 1
+  size: Optional[int] = 50
+  tags: Optional[str] = None
+  orderBy: Optional[OrderByOptions] = "name"
+  order: Optional[OrderDirectionOptions] = "ASC"
+  begin: Optional[datetime] = None
+  end: Optional[datetime] = None
+  active: Optional[bool] = None
+  billable: Optional[bool] = None
+  full: Optional[bool] = False
+  term: Optional[str] = None
+  modified_after: Optional[datetime] = None
+
+  @field_serializer('customers', 'projects', 'activities')
   def join_lists(self, value) -> str:
     return ",".join(value)

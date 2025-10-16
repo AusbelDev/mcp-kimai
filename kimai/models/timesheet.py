@@ -2,7 +2,9 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, field_serializer, model_validator
 from datetime import datetime
 
+from kimai.models.activity import KimaiActivityDetails
 from kimai.models.misc import KimaiMetaPairValue
+from kimai.models.project import KimaiProject
 
 # TODO: Again, find a way to map camelCase to snake_case
 # Hint: Use Pydantic Config (?)
@@ -47,8 +49,6 @@ class KimaiTimesheetCollection(BaseModel):
     if("internalRate" not in data): raise Exception(f'No field called "internalRate" in data')
     if("metaFields" not in data): raise Exception(f'No field called "metaFields" in data')
 
-    print(data)
-
     cls.internal_rate = data.get("internalRate")
     cls.meta_fields = data.get("metaFields")
 
@@ -56,6 +56,18 @@ class KimaiTimesheetCollection(BaseModel):
 
 class KimaiTimesheetCollectionDetails(BaseModel):
   user: Optional[int] = None
+  tags: List[str] = []
+  id: Optional[int] = None
+  begin: datetime
+  end: Optional[datetime] = None
+  duration: Optional[int] = None
+  activity: KimaiActivityDetails
+  description: Optional[str] = None
+  rate: Optional[float] = None
+  internalRate: Optional[float] = None
+  exported: bool
+  billable: bool
+  metaFields: List[KimaiMetaPairValue] = []
 
 class KimaiTimesheet(BaseModel):
   begin: datetime

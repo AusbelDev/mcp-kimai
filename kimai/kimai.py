@@ -1,3 +1,5 @@
+from datetime import datetime
+from calendar import monthrange
 import logging
 import dotenv
 import sys
@@ -5,13 +7,16 @@ import os
 
 from typing import Any, List
 from fastmcp import FastMCP
+from pydantic import BaseModel
 from requests.models import HTTPError
 
 from kimai.models.activity import KimaiActivity, KimaiActivityEntity
 from kimai.models.customer import KimaiCustomer
-from kimai.models.misc import KimaiVersion
-from kimai.models.timesheet import KimaiTimesheet, KimaiTimesheetCollectionDetails, KimaiTimesheetEntity
+from kimai.models.misc import KimaiVersion, MCPContextMeta
+from kimai.models.request import IKimaiFetchActivitiesParams, IKimaiFetchRecentTimesheetsParams
+from kimai.models.timesheet import KimaiTimesheet, KimaiTimesheetCollection, KimaiTimesheetCollectionDetails, KimaiTimesheetEntity
 from kimai.services.kimai.kimai import KimaiService
+from kimai.services.storage.store import DiskStorageService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,11 +24,46 @@ logging.basicConfig(
     stream=sys.stderr,
 )
 logger = logging.getLogger("kimai-server")
-
 dotenv.load_dotenv()
 
 mcp = FastMCP(os.getenv("MCP_SERVER_NAME", "Kimai-MCP"))
 kimai_service = KimaiService.get_instance()
+storage_service = DiskStorageService("./mcp_context/")
+
+def get_meta() -> None:
+  meta = None
+  difference = 0
+
+  try:
+    meta = MCPContextMeta(**storage_service.read_json("mcp_context_meta.json"))
+    difference = (datetime.now() - meta.last_update).days
+
+    logger.warning(f'MCP context already existing. It\'s been {difference} day{"s" if difference != 1 else ""} since last download')
+
+  except Exception as err:
+    logger.warning(f'{err}')
+
+  if(meta and difference <= 7): return
+  logger.warning(f'Automatically downloading most recent context.')
+
+  activities = kimai_service.get_activities()
+  customers = kimai_service.get_customers()
+  tags = kimai_service.get_tags()
+  timesheets = kimai_service.get_timesheets()
+  projects = kimai_service.get_projects()
+
+  timesheet_descs = [timesheet.description for timesheet in timesheets if timesheet.description]
+
+  storage_service.write("kimai_activities.json", f'[\n{",\n".join([activity.model_dump_json() for activity in activities])}\n]')
+  storage_service.write("kimai_customers.json", f'[\n{",\n".join([activity.model_dump_json() for activity in customers])}\n]')
+  storage_service.write("kimai_timesheets.json", f'[\n{",\n".join([activity.model_dump_json() for activity in timesheets])}\n]')
+  storage_service.write("kimai_projects.json", f'[\n{",\n".join([activity.model_dump_json() for activity in projects])}\n]')
+  storage_service.write("kimai_tags.txt", ",\n".join(tags))
+  storage_service.write("kimai_timesheet_descriptions.txt", ",\n".join(timesheet_descs))
+
+  storage_service.write("mcp_context_meta.json", MCPContextMeta().model_dump_json(indent = 2))
+
+  return
 
 @mcp.tool()
 async def kimai_ping() -> str:
@@ -182,23 +222,36 @@ async def kimai_list_projects() -> List[Any]:
     print(err)
     return err.response.json()
 
-# # TODO
-# @mcp.tool()
-# async def kimai_list_timesheets() -> List[Any]:
-#   try:
-#     response = kimai_service.version()
-# 
-#     return response
-#   except HTTPError as err:
-#     print(err)
-#     return err.response.json()
+@mcp.tool()
+async def kimai_list_timesheets() -> List[KimaiTimesheetCollection]:
+  """
+    Fetches the available timesheets.
+
+    @return
+    List[KimaiProjectCollection] = A list of the available projects.
+  """
+  try:
+    response = kimai_service.get_timesheets()
+
+    return response
+  except HTTPError as err:
+    print(err)
+    return err.response.json()
+
+@mcp.tool()
+def context_download():
+  """
+  Downloads latest metadata info such as activities, customers, projects, user
+  timesheets, tags and descriptions.
+  """
+  get_meta()
 
 if(__name__ == "__main__"):
   HTTP_TRANSPORT = os.getenv("HTTP_TRANSPORT", "http")
   PORT = os.getenv("PORT", 8000)
-  logger.warning(f'{HTTP_TRANSPORT}, {PORT}')
 
   try:
-    mcp.run(transport = 'http', port = PORT)
-  except Exception:
+    get_meta()
+    mcp.run(transport = "stdio")
+  except Exception as err:
     sys.exit(1)

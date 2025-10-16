@@ -1,0 +1,10 @@
+services:
+  kimai-mcp-server:
+    container_name: ${MCP_SERVER_NAME}
+    image: python:3.11-slim
+    restart: always
+    ports:
+      - ${MCP_PORT}:${MCP_PORT}
+    volumes:
+      - ./.docker/mcp-server:/var/run/docker.sock
+
