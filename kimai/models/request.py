@@ -1,6 +1,10 @@
 import os
 
-from typing import Any
+from typing import Any, List, Literal, Optional
+
+from pydantic import BaseModel, field_serializer
+
+from kimai.models.misc import OrderByOptions, OrderDirectionOptions, VisibilityOptions
 
 class KimaiRequestHeaders:
   user_token: str
@@ -25,3 +29,15 @@ class KimaiRequestHeaders:
       'X-AUTH-TOKEN': self.user_password
     }
 
+class IKimaiFetchActivitiesParams(BaseModel):
+  project: Optional[str] = None
+  projects: Optional[List[str]] = None
+  visible: Optional[VisibilityOptions] = None
+  globals: Optional[bool] = None
+  orderBy: Optional[OrderByOptions] = "name"
+  order: Optional[OrderDirectionOptions] = "ASC"
+  term: Optional[str] = None
+
+  @field_serializer('projects')
+  def join_lists(self, value) -> str:
+    return ",".join(value)

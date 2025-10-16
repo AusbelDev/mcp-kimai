@@ -10,7 +10,7 @@ from requests.models import HTTPError
 from kimai.models.activity import KimaiActivity, KimaiActivityEntity
 from kimai.models.customer import KimaiCustomer
 from kimai.models.misc import KimaiVersion
-from kimai.models.timesheet import KimaiTimesheet, KimaiTimesheetEntity
+from kimai.models.timesheet import KimaiTimesheet, KimaiTimesheetCollectionDetails, KimaiTimesheetEntity
 from kimai.services.kimai.kimai import KimaiService
 
 logging.basicConfig(
@@ -27,6 +27,12 @@ kimai_service = KimaiService.get_instance()
 
 @mcp.tool()
 async def kimai_ping() -> str:
+  """
+    Checks Kimai's API status by returning a string when is up.
+
+    @return
+    str: String "pong"
+  """
   try:
     response = kimai_service.ping()
 
@@ -37,6 +43,12 @@ async def kimai_ping() -> str:
 
 @mcp.tool()
 async def kimai_version() -> KimaiVersion:
+  """
+    Fetches current Kimai compilation version.
+
+    @return
+    KimaiVersion: Object representing the current version.
+  """
   try:
     response = kimai_service.version()
 
@@ -47,6 +59,16 @@ async def kimai_version() -> KimaiVersion:
 
 @mcp.tool()
 async def kimai_list_activities() -> List[KimaiActivity]:
+  """
+    List available activities for the user.
+
+    @param
+    params[Optional[IKimaiFetchActivitiesParams]]: A set of params for deepening
+    the search. By default all params are disabled.
+
+    @return
+    List[KimaiActivity]: A list of activities.
+  """
   try:
     response = kimai_service.get_activities()
 
@@ -57,6 +79,15 @@ async def kimai_list_activities() -> List[KimaiActivity]:
 
 @mcp.tool()
 async def kimai_get_activity(id: int) -> KimaiActivityEntity:
+  """
+    Fetches a specific activity whose id matches.
+
+    @param
+    id[int]: Specific activity id.
+
+    @return
+    KimaiActivityEntity: The found activity.
+  """
   try:
     response = kimai_service.get_activity(id)
 
@@ -67,6 +98,12 @@ async def kimai_get_activity(id: int) -> KimaiActivityEntity:
 
 @mcp.tool()
 async def kimai_list_customers() -> List[KimaiCustomer]:
+  """
+    Fetches available customers in the system.
+
+    @return
+    List[KimaiCustomer]: The list of available customers.
+  """
   try:
     response = kimai_service.get_customers()
 
@@ -77,6 +114,15 @@ async def kimai_list_customers() -> List[KimaiCustomer]:
 
 @mcp.tool()
 async def kimai_create_timesheet(timesheet: KimaiTimesheet) -> KimaiTimesheetEntity:
+  """
+    Creates the provided timesheet in the system.
+
+    @param
+    timesheet[KimaiTimesheet]: The activity to be created.
+
+    @return
+    KimaiTimesheetEntity: The created timesheet.
+  """
   try:
     response = kimai_service.create_timesheet(timesheet)
 
@@ -87,6 +133,15 @@ async def kimai_create_timesheet(timesheet: KimaiTimesheet) -> KimaiTimesheetEnt
 
 @mcp.tool()
 async def kimai_update_timesheet(id: int, timesheet: KimaiTimesheet) -> KimaiTimesheetEntity:
+  """
+    Edits the specified timesheet that matches the id.
+
+    @param
+    timesheet[KimaiTimesheet]: The activity to be edited.
+
+    @return
+    KimaiTimesheetEntity: The created timesheet.
+  """
   try:
     response = kimai_service.update_timesheet(id, timesheet)
 
@@ -96,7 +151,29 @@ async def kimai_update_timesheet(id: int, timesheet: KimaiTimesheet) -> KimaiTim
     return err.response.json()
 
 @mcp.tool()
+async def kimai_list_recent_activities() -> List[KimaiTimesheetCollectionDetails]:
+  """
+    Fetches the user's recent timesheets.
+
+    @return
+    List[KimaiTimesheetCollectionDetails] = A list of the recent timesheets.
+  """
+  try:
+    response = kimai_service.get_recent_timesheets()
+
+    return response
+  except HTTPError as err:
+    print(err)
+
+    return err.response.json()
+@mcp.tool()
 async def kimai_list_projects() -> List[Any]:
+  """
+    Fetches the available projects.
+
+    @return
+    List[KimaiProjectCollection] = A list of the available projects.
+  """
   try:
     response = kimai_service.get_projects()
 
@@ -105,16 +182,16 @@ async def kimai_list_projects() -> List[Any]:
     print(err)
     return err.response.json()
 
-# TODO
-@mcp.tool()
-async def kimai_list_timesheets() -> List[Any]:
-  try:
-    response = kimai_service.version()
-
-    return response
-  except HTTPError as err:
-    print(err)
-    return err.response.json()
+# # TODO
+# @mcp.tool()
+# async def kimai_list_timesheets() -> List[Any]:
+#   try:
+#     response = kimai_service.version()
+# 
+#     return response
+#   except HTTPError as err:
+#     print(err)
+#     return err.response.json()
 
 if(__name__ == "__main__"):
   HTTP_TRANSPORT = os.getenv("HTTP_TRANSPORT", "http")

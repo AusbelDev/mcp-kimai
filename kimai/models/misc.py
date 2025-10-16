@@ -1,4 +1,9 @@
+from typing import Literal, TypeAlias
 from pydantic import BaseModel
+
+VisibilityOptions: TypeAlias = Literal["visible", "hidden", "all"]
+OrderByOptions: TypeAlias = Literal["id", "name", "project"]
+OrderDirectionOptions: TypeAlias = Literal["ASC", "DESC"]
 
 class KimaiVersion(BaseModel):
   version: str
