@@ -1,19 +1,17 @@
 from datetime import datetime
-from calendar import monthrange
 import logging
 import dotenv
 import sys
 import os
 
-from typing import Any, List
+from typing import Any, Dict, List, cast
 from fastmcp import FastMCP
-from pydantic import BaseModel
 from requests.models import HTTPError
 
 from kimai.models.activity import KimaiActivity, KimaiActivityEntity
 from kimai.models.customer import KimaiCustomer
 from kimai.models.misc import KimaiVersion, MCPContextMeta
-from kimai.models.request import IKimaiFetchActivitiesParams, IKimaiFetchRecentTimesheetsParams
+from kimai.models.project import KimaiProject
 from kimai.models.timesheet import KimaiTimesheet, KimaiTimesheetCollection, KimaiTimesheetCollectionDetails, KimaiTimesheetEntity
 from kimai.services.kimai.kimai import KimaiService
 from kimai.services.storage.store import DiskStorageService
@@ -206,6 +204,7 @@ async def kimai_list_recent_activities() -> List[KimaiTimesheetCollectionDetails
     print(err)
 
     return err.response.json()
+
 @mcp.tool()
 async def kimai_list_projects() -> List[Any]:
   """
@@ -245,6 +244,86 @@ def context_download():
   timesheets, tags and descriptions.
   """
   get_meta()
+
+@mcp.resource("kimai_context://kimai_activities")
+def get_activities() -> List[KimaiActivity]:
+  """
+  Fetches Kimai activities locally if they exist. Else, they are requested and
+  saved from the API.
+  """
+  activities = None
+
+  try:
+    activities = [KimaiActivity(**cast(Dict, activity)) for activity in storage_service.read_json("kimai_activities.json")]
+  except:
+    activities = kimai_service.get_activities()
+    storage_service.write("kimai_activities.json", f'[\n{",\n".join([activity.model_dump_json() for activity in activities])}\n]')
+
+  return activities
+
+@mcp.resource("kimai_context://kimai_customers")
+def get_customers() -> List[KimaiCustomer]:
+  """
+  Fetches Kimai customers locally if they exist. Else, they are requested and
+  saved from the API.
+  """
+  customers = None
+
+  try:
+    customers = [KimaiCustomer(**cast(Dict, customer)) for customer in storage_service.read_json("kimai_customers.json")]
+  except:
+    customers = kimai_service.get_customers()
+    storage_service.write("kimai_customers.json", f'[\n{",\n".join([customer.model_dump_json() for customer in customers])}\n]')
+
+  return customers
+
+@mcp.resource("kimai_context://kimai_tags")
+def get_tags() -> List[str]:
+  """
+  Fetches Kimai tags locally if they exist. Else, they are requested and
+  saved from the API.
+  """
+  tags = None
+
+  try:
+    tags = cast(List[str], storage_service.read("kimai_tags.json"))
+  except:
+    tags = kimai_service.get_tags()
+    storage_service.write("kimai_tags.txt", ",\n".join(tags))
+
+  return tags
+
+@mcp.resource("kimai_context://kimai_timesheets")
+def get_timesheets() -> List[KimaiTimesheet]:
+  """
+  Fetches Kimai timesheets locally if they exist. Else, they are requested and
+  saved from the API.
+  """
+  timesheets = None
+
+  try:
+    timesheets = [KimaiTimesheet(**cast(Dict, timesheet)) for timesheet in storage_service.read_json("kimai_timesheets.json")]
+  except:
+    timesheets = kimai_service.get_timesheets()
+    storage_service.write("kimai_timesheets.json", f'[\n{",\n".join([timesheet.model_dump_json() for timesheet in timesheets])}\n]')
+
+  return timesheets
+
+@mcp.resource("kimai_context://kimai_projects")
+def get_projects() -> List[KimaiProject]:
+  """
+  Fetches Kimai projects locally if they exist. Else, they are requested and
+  saved from the API.
+  """
+  projects = None
+
+  try:
+    projects = [KimaiProject(**cast(Dict, project)) for project in storage_service.read_json("kimai_projects.json")]
+  except:
+    projects = kimai_service.get_projects()
+    storage_service.write("kimai_projects.json", f'[\n{",\n".join([project.model_dump_json() for project in projects])}\n]')
+
+  return projects
 
 if(__name__ == "__main__"):
   HTTP_TRANSPORT = os.getenv("HTTP_TRANSPORT", "http")
