@@ -1,10 +1,22 @@
+name: ${MCP_SERVER_NAME}
 services:
   kimai-mcp-server:
     container_name: ${MCP_SERVER_NAME}
-    image: python:3.11-slim
-    restart: always
+    image: kimAI/dev:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # - ${MCT_PERSISTENT_STORE}:/app/mcp_context/:rw
+      - ./.docker/kimAI/mcp_context:/app/mcp_context/:rw
+      - /app/
     ports:
       - ${MCP_PORT}:${MCP_PORT}
-    volumes:
-      - ./.docker/mcp-server:/var/run/docker.sock
+    environment:
+      MCP_HTTP_TRANSPORT: ${MCP_HTTP_TRANSPORT}
+      MCP_PORT: ${MCP_PORT}
+      MCP_SERVER_NAME: ${MCP_SERVER_NAME}
+      KIMAI_BASE_URL: ${KIMAI_BASE_URL}
+      KIMAI_USER: ${KIMAI_USER}
+      KIMAI_TOKEN: ${KIMAI_TOKEN}
 

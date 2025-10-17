@@ -1,5 +1,7 @@
 from datetime import datetime
 import logging
+
+from requests import Request
 import dotenv
 import sys
 import os
@@ -8,6 +10,8 @@ from typing import Any, Dict, List, cast
 from fastmcp import FastMCP
 from requests.models import HTTPError
 
+from starlette.responses import PlainTextResponse
+from starlette.requests import Request
 from kimai.models.activity import KimaiActivity, KimaiActivityEntity
 from kimai.models.customer import KimaiCustomer
 from kimai.models.misc import KimaiVersion, MCPContextMeta
@@ -24,9 +28,9 @@ logging.basicConfig(
 logger = logging.getLogger("kimai-server")
 dotenv.load_dotenv()
 
-mcp = FastMCP(os.getenv("MCP_SERVER_NAME", "Kimai-MCP"))
+mcp = FastMCP(os.getenv("MCP_SERVER_NAME", "Kimai-MCP"), stateless_http = True)
 kimai_service = KimaiService.get_instance()
-storage_service = DiskStorageService(os.path.abspath("/") + "app/" + "mcp_context/")
+storage_service = DiskStorageService("./mcp_context/")
 
 def get_meta() -> None:
   meta = None
@@ -36,10 +40,10 @@ def get_meta() -> None:
     meta = MCPContextMeta(**storage_service.read_json("mcp_context_meta.json"))
     difference = (datetime.now() - meta.last_update).days
 
-    logger.warning(f'MCP context already existing. It\'s been {difference} day{"s" if difference != 1 else ""} since last download')
+    logger.info(f'MCP context already existing. It\'s been {difference} day{"s" if difference != 1 else ""} since last download')
 
   except Exception as err:
-    logger.warning(f'{err}')
+    logger.error(f'{err}')
 
   if(meta and difference <= 7): 
     return
@@ -69,6 +73,10 @@ def get_meta() -> None:
   storage_service.write("mcp_context_meta.json", MCPContextMeta().model_dump_json(indent = 2))
 
   return
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> PlainTextResponse:
+  return PlainTextResponse("MCP Server is up and running")
 
 @mcp.tool()
 async def kimai_ping() -> str:
@@ -346,7 +354,12 @@ if(__name__ == "__main__"):
   PORT = os.getenv("PORT", 8000)
 
   try:
-    mcp.run(transport = "stdio")
+    get_meta()
+    match(HTTP_TRANSPORT):
+      case "http":
+        mcp.run(transport = HTTP_TRANSPORT, host = "0.0.0.0", port = PORT)
+      case "stdio":
+        mcp.run(transport = HTTP_TRANSPORT)
   except Exception as err:
     logger.error(f'Fatal error: {err}')
     sys.exit(1)
