@@ -13,5 +13,7 @@ RUN useradd -m -u 1000 mcpuser && \
 
 USER mcpuser
 
+RUN mkdir /app/mcp_context
+
 # Run the server
 CMD ["python", "-m", "kimai.kimai"]

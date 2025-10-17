@@ -5,8 +5,12 @@ from sys import argv
 
 from abc import ABC, abstractmethod
 from typing import Any, Literal, Mapping, Sequence, TypeAlias
+import logging
 
 Store_Type: TypeAlias = Literal["disk", "s3"]
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class I_Storage(ABC):
   @abstractmethod
@@ -55,19 +59,21 @@ class DiskStorage(I_Storage):
     self.root_path = root_path + ("/" if not root_path.endswith("/") else "")
 
     if(not os.path.exists(self.root_path)):
-      print(f'[DISK-STORAGE]: This path does not exist. Creating path')
+      logger.info('[DISK-STORAGE]: This path does not exist. Creating path')
       os.makedirs(self.root_path)
 
-    print(f'Using Disk Storage. Saving fles in path "{self.root_path}"')
+    logger.info(f'Using Disk Storage. Saving files in path "{self.root_path}"')
 
   def write(self, path: str, content: Sequence[str] | str):
-    if(not isinstance(content, str) and isinstance(content, Sequence)): content = "\n".join(content)
+    if(not isinstance(content, str) and isinstance(content, Sequence)): 
+      content = "\n".join(content)
 
     full_path = self.root_path + path
     split_path = full_path.split("/")
     filepath = "/".join(split_path[:-1])
 
-    if(not os.path.exists(filepath)): os.makedirs(filepath)
+    if(not os.path.exists(filepath)):
+      os.makedirs(filepath)
 
     with open(full_path, "w") as out_file:
       out_file.write(content)
