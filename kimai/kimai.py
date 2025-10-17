@@ -83,7 +83,7 @@ async def kimai_ping() -> str:
 
     return response
   except HTTPError as err:
-    print(err)
+    logger.error(err)
     return err.response.json()
 
 @mcp.tool()
@@ -99,7 +99,7 @@ async def kimai_version() -> KimaiVersion:
 
     return response
   except HTTPError as err:
-    print(err)
+    logger.error(err)
     return err.response.json()
 
 @mcp.tool()
@@ -119,7 +119,7 @@ async def kimai_list_activities() -> List[KimaiActivity]:
 
     return response
   except HTTPError as err:
-    print(err)
+    logger.error(err)
     return err.response.json()
 
 @mcp.tool()
@@ -138,7 +138,7 @@ async def kimai_get_activity(id: int) -> KimaiActivityEntity:
 
     return response
   except HTTPError as err:
-    print(err)
+    logger.error(err)
     return err.response.json()
 
 @mcp.tool()
@@ -154,7 +154,7 @@ async def kimai_list_customers() -> List[KimaiCustomer]:
 
     return response
   except HTTPError as err:
-    print(err)
+    logger.error(err)
     return err.response.json()
 
 @mcp.tool()
@@ -173,7 +173,7 @@ async def kimai_create_timesheet(timesheet: KimaiTimesheet) -> KimaiTimesheetEnt
 
     return response
   except HTTPError as err:
-    print(err)
+    logger.error(err)
     return err.response.json()
 
 @mcp.tool()
@@ -192,7 +192,7 @@ async def kimai_update_timesheet(id: int, timesheet: KimaiTimesheet) -> KimaiTim
 
     return response
   except HTTPError as err:
-    print(err)
+    logger.error(err)
     return err.response.json()
 
 @mcp.tool()
@@ -208,7 +208,7 @@ async def kimai_list_recent_activities() -> List[KimaiTimesheetCollectionDetails
 
     return response
   except HTTPError as err:
-    print(err)
+    logger.error(err)
 
     return err.response.json()
 
@@ -225,7 +225,7 @@ async def kimai_list_projects() -> List[Any]:
 
     return response
   except HTTPError as err:
-    print(err)
+    logger.error(err)
     return err.response.json()
 
 @mcp.tool()
@@ -241,7 +241,7 @@ async def kimai_list_timesheets() -> List[KimaiTimesheetCollection]:
 
     return response
   except HTTPError as err:
-    print(err)
+    logger.error(err)
     return err.response.json()
 
 @mcp.tool()
