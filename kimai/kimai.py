@@ -28,7 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger("kimai-server")
 dotenv.load_dotenv()
 
-mcp = FastMCP(os.getenv("MCP_SERVER_NAME", "Kimai-MCP"), stateless_http = True)
+mcp = FastMCP(os.getenv("MCP_SERVER_NAME", "Kimai-MCP"))
 kimai_service = KimaiService.get_instance()
 storage_service = DiskStorageService("./mcp_context/")
 
@@ -204,7 +204,7 @@ async def kimai_update_timesheet(id: int, timesheet: KimaiTimesheet) -> KimaiTim
     return err.response.json()
 
 @mcp.tool()
-async def kimai_list_recent_activities() -> List[KimaiTimesheetCollectionDetails]:
+async def kimai_list_recent_timesheets() -> List[KimaiTimesheetCollectionDetails]:
   """
     Fetches the user's recent timesheets.
 
@@ -246,6 +246,25 @@ async def kimai_list_timesheets() -> List[KimaiTimesheetCollection]:
   """
   try:
     response = kimai_service.get_timesheets()
+
+    return response
+  except HTTPError as err:
+    logger.error(err)
+    return err.response.json()
+  
+@mcp.tool()
+async def kimai_get_timesheet(id: int) -> KimaiTimesheetEntity:
+  """
+    Fetches a specific timesheet whose id matches.
+
+    @param
+    id[int]: Specific timesheet id.
+
+    @return
+    KimaiTimesheetEntity: The found timesheet.
+  """
+  try:
+    response = kimai_service.get_timesheet(id)
 
     return response
   except HTTPError as err:
