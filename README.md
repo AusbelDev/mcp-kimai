@@ -1,9 +1,8 @@
 ---
 
-
 # Kimai MCP Server
 
-A **Model Context Protocol (MCP)** server that connects to your Kimai instance to list, create, and manage activities and projects directly from Claude Desktop.
+A **Model Context Protocol (MCP)** server that connects to your Kimai instance to list, create, and manage activities, timesheets and projects directly from Claude Desktop.
 
 ---
 
@@ -11,9 +10,9 @@ A **Model Context Protocol (MCP)** server that connects to your Kimai instance t
 
 This MCP server provides a simple bridge between Claude Desktop and your company’s **Kimai** time-tracking system, allowing you to:
 
-- Browse activities and projects  
-- Create and edit activities  
-- Update meta-fields  
+- Browse activities and projects
+- Create and edit activities
+- Update meta-fields
 - Quickly check connectivity and version information
 
 ---
@@ -37,13 +36,18 @@ This MCP server provides a simple bridge between Claude Desktop and your company
 
 ## 🔒 Authentication
 
-Your Kimai instance requires **X-AUTH headers** (not Bearer tokens).  
+Your Kimai instance requires **X-AUTH headers** (not Bearer tokens).
 Each request must include:
 
 ```
 
-X-AUTH-USER: <your username>
-X-AUTH-TOKEN: <your API token>
+`**MCP_HTTP_TRANSPORT**`: A way to initialize FastMCP server (remotely, 'http' or locally, 'stdio'). Defaults to locally (stdio)
+`**MCP_PORT**`: The port to be mapped when initiailizing server remotely.
+`**MCP_SERVER_NAME**`: Metadata for FastMCP.
+
+`**KIMAI_BASE_URL**`: Your company's Kimai's API URL.
+`**KIMAI_USER**`: Your Kimai username (email)
+`**KIMAI_TOKEN**`: Your generated Kimai token.
 
 ````
 
@@ -51,17 +55,20 @@ X-AUTH-TOKEN: <your API token>
 
 | Variable | Description | Example |
 |-----------|--------------|----------|
+| `MCP_HTTP_TRANSPORT` | A way to initialize FastMCP server (remotely, 'http' or locally, 'stdio'). Defaults to locally (stdio) | `stdio` |
+| `MCP_PORT` | The port to be mapped when initiailizing server remotely. | `8000` |
+| `MCP_SERVER_NAME` | Metadata for FastMCP. | `KimAI-MCP` |
+| `KIMAI_BASE_URL` | (Optional) Override the default Kimai URL | `https://kimai.mindfactory.com.mx` |
 | `KIMAI_USER` | Your Kimai username | `john.doe` |
 | `KIMAI_TOKEN` | Your Kimai API token (generated in profile) | `kT-abc123xyz` |
-| `KIMAI_BASE_URL` | (Optional) Override the default Kimai URL | `https://kimai.mindfactory.com.mx` |
 
 ---
 
 ## 🧠 API Overview
 
-- **Base URL:** `https://kimai.mindfactory.com.mx`  
-- **Protocol:** HTTPS (required)  
-- **Authentication:** `X-AUTH-USER` and `X-AUTH-TOKEN`  
+- **Base URL:** `https://kimai.mindfactory.com.mx`
+- **Protocol:** HTTPS (required)
+- **Authentication:** `X-AUTH-USER` and `X-AUTH-TOKEN`
 - **Endpoints used:**
   - `/api/ping`
   - `/api/version`
@@ -75,9 +82,9 @@ X-AUTH-TOKEN: <your API token>
 ## 🧰 Installation
 
 ### 1. Prerequisites
-- Docker Desktop with **MCP Toolkit** enabled  
-- Docker MCP CLI plugin (`docker mcp`)  
-- A valid Kimai API token  
+- Docker Desktop with **MCP Toolkit** enabled
+- Docker MCP CLI plugin (`docker mcp`)
+- A valid Kimai API token
 
 ### 2. Build & Configure
 ```bash
