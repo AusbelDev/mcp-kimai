@@ -59,10 +59,10 @@ class DiskStorage(I_Storage):
     self.root_path = root_path + ("/" if not root_path.endswith("/") else "")
 
     if(not os.path.exists(self.root_path)):
-      logger.info('[DISK-STORAGE]: This path does not exist. Creating path')
+      logger.error('[DISK-STORAGE]: This path does not exist. Creating path')
       os.makedirs(self.root_path)
 
-    logger.info(f'Using Disk Storage. Saving files in path "{self.root_path}"')
+    logger.error(f'Using Disk Storage. Saving files in path "{self.root_path}"')
 
   def write(self, path: str, content: Sequence[str] | str):
     if(not isinstance(content, str) and isinstance(content, Sequence)): 

@@ -9,12 +9,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copying source code and environment variables
 COPY kimai/ kimai/
-COPY .env .
 
-RUN useradd -m -u 1000 mcpuser && \
-    chown -R mcpuser:mcpuser /app
-
-USER mcpuser
+RUN useradd -m -u 1000 mcpuser 
+RUN chown -R mcpuser:mcpuser /app
 
 # Run the server
+EXPOSE 8000
+USER mcpuser
 CMD ["python", "-m", "kimai.kimai"]

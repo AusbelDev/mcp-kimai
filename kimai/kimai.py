@@ -40,14 +40,14 @@ def get_meta() -> None:
     meta = MCPContextMeta(**storage_service.read_json("mcp_context_meta.json"))
     difference = (datetime.now() - meta.last_update).days
 
-    logger.info(f'MCP context already existing. It\'s been {difference} day{"s" if difference != 1 else ""} since last download')
+    logger.error(f'MCP context already existing. It\'s been {difference} day{"s" if difference != 1 else ""} since last download')
 
   except Exception as err:
     logger.error(f'{err}')
 
   if(meta and difference <= 7): 
     return
-  logger.warning('Automatically downloading most recent context.')
+  logger.error('Automatically downloading most recent context.')
 
   activities = kimai_service.get_activities()
   customers = kimai_service.get_customers()
@@ -369,7 +369,7 @@ def get_projects() -> List[KimaiProject]:
   return projects
 
 if(__name__ == "__main__"):
-  HTTP_TRANSPORT = os.getenv("HTTP_TRANSPORT", "http")
+  HTTP_TRANSPORT = os.getenv("MCP_HTTP_TRANSPORT", "stdio")
   PORT = os.getenv("PORT", 8000)
 
   try:

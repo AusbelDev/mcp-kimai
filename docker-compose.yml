@@ -10,6 +10,7 @@ services:
       # - ${MCT_PERSISTENT_STORE}:/app/mcp_context/:rw
       - ./.docker/kimAI/mcp_context:/app/mcp_context/:rw
       - /app/
+    user: "${UID:-0}:${GID-0}"
     ports:
       - ${MCP_PORT}:${MCP_PORT}
     environment:
