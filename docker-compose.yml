@@ -1,22 +1,29 @@
-name: ${MCP_SERVER_NAME}
 services:
-  kimai-mcp-server:
-    container_name: ${MCP_SERVER_NAME}
-    image: kimAI/dev:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      # - ${MCT_PERSISTENT_STORE}:/app/mcp_context/:rw
-      - ./.docker/kimAI/mcp_context:/app/mcp_context/:rw
-      - /app/
+  mcp-ollama:
+    image: mcp-ollama-chat
+    container_name: mcp-ollama
     ports:
-      - ${MCP_PORT}:${MCP_PORT}
+      - "11434:11434" # Ollama (optional to expose)
+      - "11435:11435" # Bridge (Open WebUI will hit this)
     environment:
-      MCP_HTTP_TRANSPORT: ${MCP_HTTP_TRANSPORT}
-      MCP_PORT: ${MCP_PORT}
-      MCP_SERVER_NAME: ${MCP_SERVER_NAME}
-      KIMAI_BASE_URL: ${KIMAI_BASE_URL}
-      KIMAI_USER: ${KIMAI_USER}
-      KIMAI_TOKEN: ${KIMAI_TOKEN}
+      # Pre-pull one model at boot (optional)
+      OLLAMA_MODEL: qwen3:1.7b
+    volumes:
+      - ./mcp_context:/app/mcp_context:rw
 
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    depends_on:
+      - mcp-ollama
+    ports:
+      - "3000:8080" # Open WebUI at http://localhost:3000
+    environment:
+      # Point Open WebUI to the *bridge* (Ollama-compatible + MCP)
+      OLLAMA_BASE_URL: "http://mcp-ollama:11435"
+    volumes:
+      - openwebui_data:/app/backend/data
+    restart: unless-stopped
+
+volumes:
+  openwebui_data:

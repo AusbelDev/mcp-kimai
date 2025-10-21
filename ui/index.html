@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ollama + MCP Chat</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #0b1020; color: #e6eaf2; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px; }
+  .msg { padding: 12px 14px; margin: 10px 0; border-radius: 10px; white-space: pre-wrap; line-height: 1.4 }
+  .user { background: #1e2a44 }
+  .assistant { background: #142033 }
+  .tool { background: #0d1a2b; border: 1px solid #2b3a56; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  form { display: flex; gap: 8px; margin-top: 10px }
+  input, button { font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid #31405e; background: #101a30; color: #e6eaf2 }
+  button { cursor: pointer; }
+  .model { margin-bottom: 10px; opacity: .8; font-size: 14px }
+</style>
+<div class="wrap">
+  <h2>Ollama + MCP Chat</h2>
+  <div class="model">Model:
+    <input id="model" value="qwen2.5:7b" />
+  </div>
+  <div id="log"></div>
+  <form id="f">
+    <input id="q" placeholder="Ask me anything…" autofocus />
+    <button>Send</button>
+  </form>
+</div>
+<script>
+const log = document.getElementById('log');
+const modelEl = document.getElementById('model');
+const form = document.getElementById('f');
+const input = document.getElementById('q');
+
+let messages = [];
+
+function add(kind, text, extraClass='') {
+  const div = document.createElement('div');
+  div.className = `msg ${kind} ${extraClass}`;
+  div.textContent = text;
+  log.appendChild(div);
+  div.scrollIntoView({behavior:'smooth', block:'end'});
+  return div;
+}
+
+async function streamChat(userText) {
+  const model = modelEl.value || 'qwen2.5:7b';
+  messages.push({role:'user', content:userText});
+  const uiMsg = add('user', userText);
+
+  const assistantDiv = add('assistant', '');
+
+  const resp = await fetch('/api/chat', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model,
+      stream: true,
+      messages,
+      // The bridge will attach MCP tools automatically; you can hint a system prompt here if you like:
+      options: { temperature: 0.2 }
+    })
+  });
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let assistantText = '';
+
+  while (true) {
+    const {value, done} = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, {stream:true});
+    // The bridge streams newline-delimited JSON chunks compatible with Ollama’s /api/chat.
+    for (const line of chunk.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        const obj = JSON.parse(line);
+        if (obj.message && obj.message.content) {
+          assistantText += obj.message.content;
+          assistantDiv.textContent = assistantText;
+        }
+        // If a tool was called, the bridge also streams structured “tool call/result” events:
+        if (obj.tool_call) {
+          add('tool', `▶ tool ${obj.tool_call.name}\n${JSON.stringify(obj.tool_call.arguments, null, 2)}`, 'tool');
+        }
+        if (obj.tool_result) {
+          add('tool', `✔ result ${obj.tool_result.name}\n${JSON.stringify(obj.tool_result.content, null, 2)}`, 'tool');
+        }
+        if (obj.done) break;
+      } catch {}
+    }
+  }
+  messages.push({role:'assistant', content:assistantText});
+}
+
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const t = input.value.trim();
+  if (!t) return;
+  input.value='';
+  streamChat(t);
+});
+</script>
+</html>

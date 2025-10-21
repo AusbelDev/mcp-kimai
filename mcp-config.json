@@ -1,0 +1,12 @@
+{
+    "mcpServers": {
+        "custom": {
+            "command": "python",
+            "args": [
+                "-m",
+                "kimai.kimai"
+            ],
+            "transport": "stdio"
+        }
+    }
+}
