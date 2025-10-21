@@ -6,7 +6,7 @@ import dotenv
 import sys
 import os
 
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, List, Optional, cast
 from fastmcp import FastMCP
 from requests.models import HTTPError
 
@@ -15,7 +15,7 @@ from starlette.requests import Request
 from kimai.models.activity import KimaiActivity, KimaiActivityEntity
 from kimai.models.customer import KimaiCustomer
 from kimai.models.misc import KimaiVersion, MCPContextMeta
-from kimai.models.project import KimaiProject
+from kimai.models.project import KimaiProject, KimaiProjectCollection
 from kimai.models.timesheet import KimaiTimesheet, KimaiTimesheetCollection, KimaiTimesheetCollectionDetails, KimaiTimesheetEntity
 from kimai.services.kimai.kimai import KimaiService
 from kimai.services.storage.store import DiskStorageService
@@ -111,9 +111,18 @@ async def kimai_version() -> KimaiVersion:
     return err.response.json()
 
 @mcp.tool()
-async def kimai_list_activities() -> List[KimaiActivity]:
+async def kimai_list_activities(params: Optional[Dict[str, Any]]) -> List[KimaiActivity]:
   """
-    List available activities for the user.
+    List available activities for the user. It allows for a deeper search by
+    several criteria like:
+
+    project: Optional[str] = None
+    projects: Optional[List[str]] = None
+    visible: Optional[VisibilityOptions] = None
+    globals: Optional[bool] = None
+    orderBy: Optional[OrderByOptions] = "name"
+    order: Optional[OrderDirectionOptions] = "ASC"
+    term: Optional[str] = None
 
     @param
     params[Optional[IKimaiFetchActivitiesParams]]: A set of params for deepening
@@ -122,13 +131,34 @@ async def kimai_list_activities() -> List[KimaiActivity]:
     @return
     List[KimaiActivity]: A list of activities.
   """
-  try:
-    response = kimai_service.get_activities()
+  activities = None
 
-    return response
-  except HTTPError as err:
-    logger.error(err)
-    return err.response.json()
+  try:
+    if(params):
+      logger.info("Fetching parameterized request from API")
+      activities = kimai_service.get_activities(params)
+
+      return activities
+
+    if(storage_service.file_exists("kimai_activities.json")):
+      logger.info("Fetching available activities from local store")
+
+      activities = [KimaiActivity(**cast(Dict, activity)) for activity in storage_service.read_json("kimai_activities.json")]
+
+      return activities
+
+    logger.info("Fetching default activities from API")
+
+    activities = kimai_service.get_activities()
+    activities_joined = ",\n".join([activity.model_dump_json() for activity in activities])
+    storage_service.write("kimai_activities.json", f'[\n{activities_joined}\n]')
+
+    return activities
+
+  except Exception as err:
+    logger.error(f'{err}')
+
+  return []
 
 @mcp.tool()
 async def kimai_get_activity(id: int) -> KimaiActivityEntity:
@@ -158,9 +188,20 @@ async def kimai_list_customers() -> List[KimaiCustomer]:
     List[KimaiCustomer]: The list of available customers.
   """
   try:
-    response = kimai_service.get_customers()
+    logger.info("Fetching available recent timesheets from local store")
+    if(storage_service.file_exists("kimai_customers.json")):
+      customers = [KimaiCustomer(**cast(Dict, customer)) for customer in storage_service.read_json("kimai_customers.json")]
 
-    return response
+      return customers
+
+    logger.info("Fetching default timesheets from API")
+    customers = kimai_service.get_customers()
+
+    customers_joined = ",\n".join([customer.model_dump_json() for customer in customers])
+    storage_service.write("kimai_customers.json", f'[\n{customers_joined}\n]')
+
+    return customers
+
   except HTTPError as err:
     logger.error(err)
     return err.response.json()
@@ -204,24 +245,49 @@ async def kimai_update_timesheet(id: int, timesheet: KimaiTimesheet) -> KimaiTim
     return err.response.json()
 
 @mcp.tool()
-async def kimai_list_recent_timesheets() -> List[KimaiTimesheetCollectionDetails]:
+async def kimai_list_recent_timesheets(
+  params: Optional[Dict[str, Any]]
+) -> List[KimaiTimesheetCollectionDetails]:
   """
-    Fetches the user's recent timesheets.
+    Fetches the user's recent timesheets. It also allows to search by different
+    criteria like:
+
+    user: Optional[str] = None
+    begin: Optional[datetime] = None
+    size: Optional[int] = None
 
     @return
     List[KimaiTimesheetCollectionDetails] = A list of the recent timesheets.
   """
   try:
-    response = kimai_service.get_recent_timesheets()
+    if(params):
+      logger.info("Fetching parameterized request from API")
+      timesheets = kimai_service.get_recent_timesheets(params)
 
-    return response
-  except HTTPError as err:
-    logger.error(err)
+      return timesheets
 
-    return err.response.json()
+    if(storage_service.file_exists("kimai_timesheets.json")):
+      logger.info("Fetching available recent timesheets from local store")
+
+      timesheets = [KimaiTimesheetCollectionDetails(**cast(Dict, activity)) for activity in storage_service.read_json("kimai_timesheets.json")]
+
+      return timesheets
+
+    logger.info("Fetching default timesheets from API")
+
+    timesheets = kimai_service.get_recent_timesheets()
+    timesheets_joined = ",\n".join([activity.model_dump_json() for activity in timesheets])
+    storage_service.write("kimai_timesheets.json", f'[\n{timesheets_joined}\n]')
+
+    return timesheets
+
+  except Exception as err:
+    logger.error(f'{err}')
+
+  return []
 
 @mcp.tool()
-async def kimai_list_projects() -> List[Any]:
+async def kimai_list_projects() -> List[KimaiProjectCollection]:
   """
     Fetches the available projects.
 
@@ -229,29 +295,78 @@ async def kimai_list_projects() -> List[Any]:
     List[KimaiProjectCollection] = A list of the available projects.
   """
   try:
-    response = kimai_service.get_projects()
+    if(storage_service.file_exists("kimai_projects.json")):
+      logger.info("Fetching available recent projects from local store")
 
-    return response
-  except HTTPError as err:
-    logger.error(err)
-    return err.response.json()
+      projects = [KimaiProjectCollection(**cast(Dict, activity)) for activity in storage_service.read_json("kimai_projects.json")]
+
+      return projects
+
+    logger.info("Fetching default projects from API")
+
+    projects = kimai_service.get_projects()
+    projects_joined = ",\n".join([activity.model_dump_json() for activity in projects])
+    storage_service.write("kimai_projects.json", f'[\n{projects_joined}\n]')
+
+    return projects
+
+  except Exception as err:
+    logger.error(f'{err}')
+
+  return []
 
 @mcp.tool()
-async def kimai_list_timesheets() -> List[KimaiTimesheetCollection]:
+async def kimai_list_timesheets(params: Optional[Dict[str, Any]]) -> List[KimaiTimesheetCollection]:
   """
-    Fetches the available timesheets.
+    Fetches the available timesheets. It has several search parameterization by:
+
+    user: Optional[str] = None
+    customers: Optional[List[str]] = None
+    projects: Optional[List[str]] = None
+    activities: Optional[List[str]] = None
+    page: Optional[int] = 1
+    size: Optional[int] = 50
+    tags: Optional[str] = None
+    orderBy: Optional[OrderByOptions] = "name"
+    order: Optional[OrderDirectionOptions] = "ASC"
+    begin: Optional[datetime] = None
+    end: Optional[datetime] = None
+    active: Optional[bool] = None
+    billable: Optional[bool] = None
+    full: Optional[bool] = False
+    term: Optional[str] = None
+    modified_after: Optional[datetime] = None
 
     @return
     List[KimaiProjectCollection] = A list of the available projects.
   """
   try:
-    response = kimai_service.get_timesheets()
+    if(params):
+      logger.info("Fetching parameterized request from API")
+      timesheets = kimai_service.get_timesheets(params)
 
-    return response
-  except HTTPError as err:
-    logger.error(err)
-    return err.response.json()
-  
+      return timesheets
+
+    if(storage_service.file_exists("kimai_timesheets.json")):
+      logger.info("Fetching available timesheets from local store")
+
+      timesheets = [KimaiTimesheetCollection(**cast(Dict, activity)) for activity in storage_service.read_json("kimai_timesheets.json")]
+
+      return timesheets
+
+    logger.info("Fetching default timesheets from API")
+
+    timesheets = kimai_service.get_timesheets()
+    timesheets_joined = ",\n".join([activity.model_dump_json() for activity in timesheets])
+    storage_service.write("kimai_timesheets.json", f'[\n{timesheets_joined}\n]')
+
+    return timesheets
+
+  except Exception as err:
+    logger.error(f'{err}')
+
+  return []
+
 @mcp.tool()
 async def kimai_get_timesheet(id: int) -> KimaiTimesheetEntity:
   """
@@ -283,16 +398,27 @@ def kimai_context_download():
 def get_activities() -> List[KimaiActivity]:
   """
   Fetches Kimai activities locally if they exist. Else, they are requested and
-  saved from the API.
+  saved from the API. It allows for a deeper search considering the following
+  criteria:
+
+  project: Optional[str] = None
+  projects: Optional[List[str]] = None
+  visible: Optional[VisibilityOptions] = None
+  globals: Optional[bool] = None
+  orderBy: Optional[OrderByOptions] = "name"
+  order: Optional[OrderDirectionOptions] = "ASC"
+  term: Optional[str] = None
+
   """
   activities = None
 
   try:
-    activities = [KimaiActivity(**cast(Dict, activity)) for activity in storage_service.read_json("kimai_activities.json")]
+    activities = [KimaiActivity(**cast(Dict, customer)) for customer in storage_service.read_json("kimai_activities.json")]
+
   except Exception as err:
     logger.error(f'{err}')
     activities = kimai_service.get_activities()
-    activities_joined = ",\n".join([activity.model_dump_json() for activity in activities])
+    activities_joined = ",\n".join([customer.model_dump_json() for customer in activities])
     storage_service.write("kimai_activities.json", f'[\n{activities_joined}\n]')
 
   return activities
@@ -369,6 +495,10 @@ def get_projects() -> List[KimaiProject]:
   return projects
 
 if(__name__ == "__main__"):
+  # timesheets = kimai_service.get_timesheets({"begin": "2025-10-01T00:00:00", "end": "2025-10-01T23:59:59"})
+
+  # for timesheet in timesheets:
+  #   print(timesheet.model_dump_json(indent = 2))
   HTTP_TRANSPORT = os.getenv("MCP_HTTP_TRANSPORT", "stdio")
   PORT = os.getenv("PORT", 8000)
 

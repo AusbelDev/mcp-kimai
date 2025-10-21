@@ -1,4 +1,5 @@
 .env
+.docker/
 mcp_context/
 
 # Byte-compiled / optimized / DLL files

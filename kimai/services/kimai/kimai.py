@@ -98,41 +98,21 @@ class KimaiService:
         @return
         List[KimaiActivity]: A list of activities.
         """
-        logger.info("Loading activities from local context file.")
+        url = f"{self.__api_url}/activities"
+        valid_params = None
 
-        if os.path.exists(f"{CONTEXT_PATH}/kimai_activities.json"):
-            try:
-                with open(f"{CONTEXT_PATH}/kimai_activities.json", "r", encoding="utf-8") as f:
-                    data = json.load(f)
+        if params:
+            valid_params = IKimaiFetchActivitiesParams(**params)
 
-                if isinstance(data, list):
-                    logger.info("Loaded activities from local context file.")
-                    return [KimaiActivity(**activity) for activity in data]
-            except Exception as e:
-                logger.error(
-                    f"Failed to load activities from local context file. Error: {e}"
-                )
-        else:
-            try:
-                logger.info("Fetching activities from Kimai API.")
-                url = f"{self.__api_url}/activities"
-                valid_params = None
-                if params:
-                    valid_params = IKimaiFetchActivitiesParams(**params)
+        response = requests.get(
+            url,
+            headers=self.__request_headers.as_headers(),
+            params=valid_params.model_dump(exclude_none=True) if valid_params else None,
+        )
+        response.raise_for_status()
+        data = response.json()
 
-                response = requests.get(
-                    url,
-                    headers=self.__request_headers.as_headers(),
-                    params=valid_params.model_dump(exclude_none=True) if valid_params else None,
-                )
-                response.raise_for_status()
-
-                data = response.json()
-
-                return [KimaiActivity(**activity) for activity in data]
-            except Exception as e:
-                logger.error(f"Failed to fetch activities from Kimai API. Error: {e}")
-        return []
+        return [KimaiActivity(**activity) for activity in data]
 
     def get_activity(self, id: int) -> KimaiActivityEntity:
         """
@@ -235,52 +215,25 @@ class KimaiService:
         @return
         List[KimaiTimesheetCollection]: The list of available timesheets of the user.
         """
+        url = f"{self.__api_url}/timesheets"
+        valid_params = None
 
-        local_context_file = f"{CONTEXT_PATH}/kimai_timesheets.json"
-        logger.info(
-            "Attempting to load timesheets from local context file." 
+        if params:
+            valid_params = IKimaiFetchTimesheetsParams(**params)
+
+        response = requests.get(
+            url,
+            headers=self.__request_headers.as_headers(),
+            params=valid_params.model_dump(exclude_none=True)
+            if valid_params
+            else None,
         )
-        if os.path.exists(local_context_file):
-            try:
-                if os.path.exists(local_context_file):
-                    with open(local_context_file, "r", encoding="utf-8") as f:
-                        response_data = json.load(f)
+        response.raise_for_status()
+        response_data = response.json()
 
-                    if isinstance(response_data, list):
-                        logger.info("Loaded timesheets from local context file.")
-                        return [
-                            KimaiTimesheetCollection(**timesheet)
-                            for timesheet in response_data
-                        ]
-            except Exception as e:
-                logger.error(
-                    f"Failed to load timesheets from local context file. Error: {e}"
-                )
-        else:
-            try:
-                logger.info("Fetching timesheets from Kimai API.")
-                url = f"{self.__api_url}/timesheets"
-                valid_params = None
-                if params:
-                    valid_params = IKimaiFetchTimesheetsParams(**params)
-
-                response = requests.get(
-                    url,
-                    headers=self.__request_headers.as_headers(),
-                    params=valid_params.model_dump(exclude_none=True)
-                    if valid_params
-                    else None,
-                )
-                response.raise_for_status()
-
-                response_data = response.json()
-
-                return [
-                    KimaiTimesheetCollection(**timesheet) for timesheet in response_data
-                ]
-            except Exception as e:
-                logger.error(f"Failed to fetch timesheets from Kimai API. Error: {e}")
-        return []
+        return [
+            KimaiTimesheetCollection(**timesheet) for timesheet in response_data
+        ]
 
     def get_timesheet(self, id: int) -> KimaiTimesheetEntity:
         """
@@ -289,37 +242,14 @@ class KimaiService:
         @return
         KimaiTimesheetEntity: The timesheet whose id matches.
         """
+        url = f"{self.__api_url}/timesheets/{id}"
 
-        local_context_file = f"{CONTEXT_PATH}/kimai_timesheets.json"
-        logger.info(
-            "Attempting to load timesheet from local context file." 
-        )
-        if os.path.exists(local_context_file):
-            try:
-                if os.path.exists(local_context_file):
-                    with open(local_context_file, "r", encoding="utf-8") as f:
-                        response_data = json.load(f)
-                    for timesheet in response_data:
-                        if timesheet.get("id") == id:
-                            logger.info("Loaded timesheet from local context file.")
-                            return KimaiTimesheetEntity(**timesheet)
-            except Exception as e:
-                logger.error(
-                    f"Failed to load timesheet from local context file. Error: {e}"
-                )
-        else:
-            try:
-                url = f"{self.__api_url}/timesheets/{id}"
+        response = requests.get(url, headers=self.__request_headers.as_headers())
+        response.raise_for_status()
 
-                response = requests.get(url, headers=self.__request_headers.as_headers())
-                response.raise_for_status()
+        response_data = response.json()
 
-                response_data = response.json()
-
-                return KimaiTimesheetEntity(**response_data)
-            except Exception as e:
-                logger.error(f"Failed to fetch timesheet from Kimai API. Error: {e}")
-        return KimaiTimesheetEntity()
+        return KimaiTimesheetEntity(**response_data)
 
     def get_recent_timesheets(
         self, params: Optional[Dict[str, Any]]
@@ -442,7 +372,6 @@ class KimaiService:
         url = f"{self.__api_url}/timesheets/{id}"
 
         response = requests.delete(url, headers=self.__request_headers.as_headers())
-
         response.raise_for_status()
 
         return None

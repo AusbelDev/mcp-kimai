@@ -1,5 +1,4 @@
 FROM python:3.12-slim AS base
-ENV PYTHONUNBUFFERED=1
 
 # Setting project root and installing dependencies
 FROM base AS dev-deps
@@ -14,6 +13,6 @@ RUN useradd -m -u 1000 mcpuser
 RUN chown -R mcpuser:mcpuser /app
 
 # Run the server
-EXPOSE 8000
 USER mcpuser
 CMD ["python", "-m", "kimai.kimai"]
+
