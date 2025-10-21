@@ -437,7 +437,7 @@ if __name__ == "__main__":
         get_meta()
         match HTTP_TRANSPORT:
             case "http":
-                mcp.run(transport=HTTP_TRANSPORT, host="0.0.0.0", port=PORT)
+                mcp.run(transport=HTTP_TRANSPORT)
             case "stdio":
                 mcp.run(transport=HTTP_TRANSPORT)
     except Exception as err:
