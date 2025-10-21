@@ -16,4 +16,4 @@ RUN chown -R mcpuser:mcpuser /app
 # Run the server
 EXPOSE 8000
 USER mcpuser
-CMD ["python", "-m", "kimai.kimai"]
+CMD ["python", "kimai/server.py"]

@@ -4,29 +4,31 @@ import json
 
 from typing import Any, Dict, List, Optional
 
-from kimai.models.activity import KimaiActivity, KimaiActivityEntity, KimaiActivityForm
-from kimai.models.customer import KimaiCustomer
-from kimai.models.misc import KimaiVersion
-from kimai.models.project import KimaiProjectCollection
-from kimai.models.request import (
+from models.activity import KimaiActivity, KimaiActivityEntity, KimaiActivityForm
+from models.customer import KimaiCustomer
+from models.misc import KimaiVersion
+from models.project import KimaiProjectCollection
+from models.request import (
     IKimaiFetchActivitiesParams,
     IKimaiFetchRecentTimesheetsParams,
     IKimaiFetchTimesheetsParams,
     KimaiRequestHeaders,
 )
-from kimai.models.timesheet import (
+from models.timesheet import (
     KimaiTimesheet,
     KimaiTimesheetCollection,
     KimaiTimesheetCollectionDetails,
     KimaiTimesheetEntity,
 )
-from kimai.models.user import KimaiUser
+from models.user import KimaiUser
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 CONTEXT_PATH = "./mcp_context/"
+
+
 class KimaiService:
     __api_url: str
     __request_headers: KimaiRequestHeaders
@@ -102,7 +104,9 @@ class KimaiService:
 
         if os.path.exists(f"{CONTEXT_PATH}/kimai_activities.json"):
             try:
-                with open(f"{CONTEXT_PATH}/kimai_activities.json", "r", encoding="utf-8") as f:
+                with open(
+                    f"{CONTEXT_PATH}/kimai_activities.json", "r", encoding="utf-8"
+                ) as f:
                     data = json.load(f)
 
                 if isinstance(data, list):
@@ -123,7 +127,9 @@ class KimaiService:
                 response = requests.get(
                     url,
                     headers=self.__request_headers.as_headers(),
-                    params=valid_params.model_dump(exclude_none=True) if valid_params else None,
+                    params=valid_params.model_dump(exclude_none=True)
+                    if valid_params
+                    else None,
                 )
                 response.raise_for_status()
 
@@ -237,9 +243,7 @@ class KimaiService:
         """
 
         local_context_file = f"{CONTEXT_PATH}/kimai_timesheets.json"
-        logger.info(
-            "Attempting to load timesheets from local context file." 
-        )
+        logger.info("Attempting to load timesheets from local context file.")
         if os.path.exists(local_context_file):
             try:
                 if os.path.exists(local_context_file):
@@ -291,9 +295,7 @@ class KimaiService:
         """
 
         local_context_file = f"{CONTEXT_PATH}/kimai_timesheets.json"
-        logger.info(
-            "Attempting to load timesheet from local context file." 
-        )
+        logger.info("Attempting to load timesheet from local context file.")
         if os.path.exists(local_context_file):
             try:
                 if os.path.exists(local_context_file):
@@ -311,7 +313,9 @@ class KimaiService:
             try:
                 url = f"{self.__api_url}/timesheets/{id}"
 
-                response = requests.get(url, headers=self.__request_headers.as_headers())
+                response = requests.get(
+                    url, headers=self.__request_headers.as_headers()
+                )
                 response.raise_for_status()
 
                 response_data = response.json()
