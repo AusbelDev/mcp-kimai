@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "mcp-toolkit-gateway": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-v",
+        "C:\\Users\\${WIN_USER}\\.docker\\store\\kimAI:/app/mcp_context_data",
+        "-v",
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "-v",
+        "C:\\Users\\${WIN_USER}\\.docker\\mcp:/mcp",
+        "docker/mcp-gateway",
+        "--catalog=/mcp/catalogs/docker-mcp.yaml",
+        "--catalog=/mcp/catalogs/custom.yaml",
+        "--config=/mcp/config.yaml",
+        "--registry=/mcp/registry.yaml",
+        "--tools-config=/mcp/tools.yaml",
+        "--transport=stdio"
+      ]
+    }
+  }
+}

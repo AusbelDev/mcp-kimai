@@ -1,8 +1,10 @@
+import dotenv
+dotenv.load_dotenv()
+
 from datetime import datetime
 import logging
 
 from requests import Request
-import dotenv
 import sys
 import os
 
@@ -12,6 +14,7 @@ from requests.models import HTTPError
 
 from starlette.responses import PlainTextResponse
 from starlette.requests import Request
+from kimai.common.common import CommonModule
 from kimai.models.activity import KimaiActivity, KimaiActivityEntity
 from kimai.models.customer import KimaiCustomer
 from kimai.models.misc import KimaiVersion, MCPContextMeta
@@ -26,7 +29,6 @@ logging.basicConfig(
     stream=sys.stderr,
 )
 logger = logging.getLogger("kimai-server")
-dotenv.load_dotenv()
 
 mcp = FastMCP(os.getenv("MCP_SERVER_NAME", "Kimai-MCP"))
 kimai_service = KimaiService.get_instance()
@@ -394,6 +396,22 @@ def kimai_context_download():
   """
   get_meta()
 
+@mcp.tool()
+def kimai_get_available_times_in_range(begin: datetime, end: datetime):
+  """
+  Returns the available time ranges in a range.
+
+  @params
+  begin[datetime]: The start of the range.
+  end[datetime]: The end of the range.
+
+  @return
+  Dict[str, List[KimaiTimesheetCollection]]: A dictionary consisting of each day
+  in the range with its corresponding list of timesheets.
+  """
+
+  return CommonModule.available_times_in_range(begin, end)
+
 @mcp.resource("file://kimai_activities.json")
 def get_activities() -> List[KimaiActivity]:
   """
@@ -495,10 +513,6 @@ def get_projects() -> List[KimaiProject]:
   return projects
 
 if(__name__ == "__main__"):
-  # timesheets = kimai_service.get_timesheets({"begin": "2025-10-01T00:00:00", "end": "2025-10-01T23:59:59"})
-
-  # for timesheet in timesheets:
-  #   print(timesheet.model_dump_json(indent = 2))
   HTTP_TRANSPORT = os.getenv("MCP_HTTP_TRANSPORT", "stdio")
   PORT = os.getenv("PORT", 8000)
 
