@@ -2,9 +2,9 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, field_serializer, model_validator
 from datetime import datetime
 
-from kimai.models.activity import KimaiActivityDetails
-from kimai.models.misc import KimaiMetaPairValue
-from kimai.models.project import KimaiProject
+from models.activity import KimaiActivityDetails
+from models.misc import KimaiMetaPairValue
+from models.project import KimaiProject
 
 
 # TODO: Again, find a way to map camelCase to snake_case

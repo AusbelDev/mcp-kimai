@@ -14,5 +14,4 @@ RUN chown -R mcpuser:mcpuser /app
 
 # Run the server
 USER mcpuser
-CMD ["python", "-m", "kimai.kimai"]
-
+CMD ["python", "kimai/server.py"]
