@@ -6,17 +6,20 @@ VisibilityOptions: TypeAlias = Literal["visible", "hidden", "all"]
 OrderByOptions: TypeAlias = Literal["id", "name", "project", "begin", "end", "rate"]
 OrderDirectionOptions: TypeAlias = Literal["ASC", "DESC"]
 
+
 class KimaiVersion(BaseModel):
-  version: str
-  versionId: int
-  candidate: str
-  semver: str
-  name: str
-  copyright: str
+    version: str
+    versionId: int
+    candidate: str
+    semver: str
+    name: str
+    copyright: str
+
 
 class KimaiMetaPairValue(BaseModel):
-  name: str
-  value: str
+    name: str
+    value: str
+
 
 class MCPContextMeta(BaseModel):
-  last_update: datetime = datetime.now()
+    last_update: datetime = datetime.now()

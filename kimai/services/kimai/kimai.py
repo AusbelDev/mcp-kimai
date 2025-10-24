@@ -380,14 +380,19 @@ class KimaiService:
         """
         url = f"{self.__api_url}/timesheets"
 
-        response = requests.post(
-            url,
-            headers=self.__request_headers.as_headers(),
-            json=timesheet.model_dump(exclude_none=True),
-        )
-        response.raise_for_status()
+        try:
+            response = requests.post(
+                url,
+                headers=self.__request_headers.as_headers(),
+                json=timesheet.model_dump(exclude_none=True),
+            )
+            response.raise_for_status()
 
-        response_data = response.json()
+            response_data = response.json()
+
+        except Exception as e:
+            logger.error(f"Failed to create timesheet in Kimai API. Error: {e}")
+            raise e
 
         return KimaiTimesheetEntity(**response_data)
 
