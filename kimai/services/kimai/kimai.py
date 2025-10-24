@@ -436,3 +436,51 @@ class KimaiService:
         response.raise_for_status()
 
         return None
+
+    def get_ids(self, fetch: Dict[str, str]) -> Dict[str, str]:
+        """
+        Fetches IDs for various entities based on provided names.
+
+        @param
+        fetch[Dict[str, str]]: A dictionary with entity types as keys and names as values.
+
+        @return
+        Dict[str, int]: A dictionary with entity types as keys and their corresponding IDs as values.
+        """
+
+        for entity_type, name in fetch.items():
+            if entity_type == "":
+                del fetch[entity_type]
+                continue
+            if entity_type == "project":
+                if os.path.exists(f"{CONTEXT_PATH}/kimai_projects.json"):
+                    with open(
+                        f"{CONTEXT_PATH}/kimai_projects.json", "r", encoding="utf-8"
+                    ) as f:
+                        projects_data = json.load(f)
+                    for project in projects_data:
+                        if project.get("name").lower() == name.lower():
+                            fetch["project"] = project.get("id")
+                            break
+            if entity_type == "activity":
+                if os.path.exists(f"{CONTEXT_PATH}/kimai_activities.json"):
+                    with open(
+                        f"{CONTEXT_PATH}/kimai_activities.json", "r", encoding="utf-8"
+                    ) as f:
+                        activities_data = json.load(f)
+                    for activity in activities_data:
+                        if activity.get("name").lower() == name.lower():
+                            fetch["activity"] = activity.get("id")
+                            break
+            if entity_type == "customer":
+                if os.path.exists(f"{CONTEXT_PATH}/kimai_customers.json"):
+                    with open(
+                        f"{CONTEXT_PATH}/kimai_customers.json", "r", encoding="utf-8"
+                    ) as f:
+                        customers_data = json.load(f)
+                    for customer in customers_data:
+                        if customer.get("name").lower() == name.lower():
+                            fetch["customer"] = customer.get("id")
+                            break
+
+        return fetch

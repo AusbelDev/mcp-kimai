@@ -328,6 +328,32 @@ def kimai_context_download():
     return response
 
 
+@mcp.tool()
+def kimai_get_ids(
+    customer: str = "", project: str = "", activity: str = ""
+) -> Dict[str, str]:
+    """
+    Fetches the ids for the provided customer, project and activity names.
+
+    @param
+    customer[str]: The customer name to search for.
+    project[str]: The project name to search for.
+    activity[str]: The activity name to search for.
+
+    @return
+    Dict[str, str]: A dictionary containing the found ids.
+    """
+    fetch_ids = {
+        "customer": customer,
+        "project": project,
+        "activity": activity,
+    }
+
+    ids = kimai_service.get_ids(fetch_ids)
+
+    return {k: str(v) for k, v in ids.items()}
+
+
 @mcp.resource("file://kimai_activities.json")
 def get_activities() -> List[KimaiActivity]:
     """
