@@ -1,16 +1,11 @@
-from datetime import datetime
 import logging
+import os
+import sys
+from datetime import datetime, timezone
+from typing import Any, Dict, List, cast
 
 import dotenv
-import sys
-import os
-
-from typing import Any, Dict, List, cast
 from fastmcp import FastMCP
-from requests.models import HTTPError
-
-from starlette.responses import PlainTextResponse
-from starlette.requests import Request
 from models.activity import KimaiActivity, KimaiActivityEntity
 from models.customer import KimaiCustomer
 from models.misc import KimaiVersion, MCPContextMeta
@@ -21,8 +16,11 @@ from models.timesheet import (
     KimaiTimesheetCollectionDetails,
     KimaiTimesheetEntity,
 )
+from requests.models import HTTPError
 from services.kimai.kimai import KimaiService
 from services.storage.store import DiskStorageService
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
 logging.basicConfig(
     level=logging.INFO,
@@ -43,7 +41,9 @@ def get_meta() -> Any:
 
     try:
         meta = MCPContextMeta(**storage_service.read_json("mcp_context_meta.json"))
-        difference = (datetime.now() - meta.last_update).days
+        difference = (
+            datetime.now(timezone.utc) - meta.last_update.astimezone(timezone.utc)
+        ).days
 
         logger.error(
             f"MCP context already existing. It's been {difference} day{'s' if difference != 1 else ''} since last download"
@@ -204,12 +204,6 @@ async def kimai_create_timesheet(timesheet: KimaiTimesheet) -> KimaiTimesheetEnt
         project: int
         activity: int
         description: Optional[str] = None
-        fixedRate: Optional[str] = None
-        hourlyRate: Optional[str] = None
-        user: Optional[int] = None
-        exported: Optional[bool] = None
-        billable: Optional[bool] = None
-        tags: List[str] = []
 
     @return
     KimaiTimesheetEntity: The created timesheet.

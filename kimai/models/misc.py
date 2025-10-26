@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime,timezone
 from typing import Literal, TypeAlias
 from pydantic import BaseModel
 
@@ -22,4 +22,4 @@ class KimaiMetaPairValue(BaseModel):
 
 
 class MCPContextMeta(BaseModel):
-    last_update: datetime = datetime.now()
+    last_update: datetime = datetime.now(timezone.utc)
