@@ -1,17 +1,11 @@
-from datetime import datetime
 import logging
-
-from requests import Request
-import dotenv
-import sys
 import os
-
+import sys
+from datetime import datetime, timezone
 from typing import Any, Dict, List, cast
-from fastmcp import FastMCP
-from requests.models import HTTPError
 
-from starlette.responses import PlainTextResponse
-from starlette.requests import Request
+import dotenv
+from fastmcp import FastMCP
 from models.activity import KimaiActivity, KimaiActivityEntity
 from models.customer import KimaiCustomer
 from models.misc import KimaiVersion, MCPContextMeta
@@ -22,8 +16,11 @@ from models.timesheet import (
     KimaiTimesheetCollectionDetails,
     KimaiTimesheetEntity,
 )
+from requests.models import HTTPError
 from services.kimai.kimai import KimaiService
 from services.storage.store import DiskStorageService
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,13 +35,15 @@ kimai_service = KimaiService.get_instance()
 storage_service = DiskStorageService("./mcp_context/")
 
 
-def get_meta() -> None:
+def get_meta() -> Any:
     meta = None
     difference = 0
 
     try:
         meta = MCPContextMeta(**storage_service.read_json("mcp_context_meta.json"))
-        difference = (datetime.now() - meta.last_update).days
+        difference = (
+            datetime.now(timezone.utc) - meta.last_update.astimezone(timezone.utc)
+        ).days
 
         logger.error(
             f"MCP context already existing. It's been {difference} day{'s' if difference != 1 else ''} since last download"
@@ -54,7 +53,8 @@ def get_meta() -> None:
         logger.error(f"{err}")
 
     if meta and difference <= 7:
-        return
+        # Return a json if the meta exists and is less than a week old
+        return {"meta": meta}
     logger.error("Automatically downloading most recent context.")
 
     activities = kimai_service.get_activities()
@@ -92,7 +92,7 @@ def get_meta() -> None:
         "mcp_context_meta.json", MCPContextMeta().model_dump_json(indent=2)
     )
 
-    return
+    return meta
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -199,6 +199,11 @@ async def kimai_create_timesheet(timesheet: KimaiTimesheet) -> KimaiTimesheetEnt
 
     @param
     timesheet[KimaiTimesheet]: The activity to be created.
+        begin: datetime
+        end: Optional[datetime] = None
+        project: int
+        activity: int
+        description: Optional[str] = None
 
     @return
     KimaiTimesheetEntity: The created timesheet.
@@ -312,7 +317,35 @@ def kimai_context_download():
     Downloads latest metafile info such as activities, customers, projects, user
     timesheets, tags and descriptions.
     """
-    get_meta()
+    response = get_meta()
+
+    return response
+
+
+@mcp.tool()
+def kimai_get_ids(
+    customer: str = "", project: str = "", activity: str = ""
+) -> Dict[str, str]:
+    """
+    Fetches the ids for the provided customer, project and activity names.
+
+    @param
+    customer[str]: The customer name to search for.
+    project[str]: The project name to search for.
+    activity[str]: The activity name to search for.
+
+    @return
+    Dict[str, str]: A dictionary containing the found ids.
+    """
+    fetch_ids = {
+        "customer": customer,
+        "project": project,
+        "activity": activity,
+    }
+
+    ids = kimai_service.get_ids(fetch_ids)
+
+    return {k: str(v) for k, v in ids.items()}
 
 
 @mcp.resource("file://kimai_activities.json")
@@ -437,7 +470,7 @@ if __name__ == "__main__":
         get_meta()
         match HTTP_TRANSPORT:
             case "http":
-                mcp.run(transport=HTTP_TRANSPORT)
+                mcp.run(transport=HTTP_TRANSPORT, port=int(PORT))
             case "stdio":
                 mcp.run(transport=HTTP_TRANSPORT)
     except Exception as err:

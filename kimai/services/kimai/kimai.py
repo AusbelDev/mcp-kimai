@@ -1,9 +1,10 @@
-import requests
-import os
 import json
-
+import logging
+import os
+from datetime import timezone
 from typing import Any, Dict, List, Optional
 
+import requests
 from models.activity import KimaiActivity, KimaiActivityEntity, KimaiActivityForm
 from models.customer import KimaiCustomer
 from models.misc import KimaiVersion
@@ -21,8 +22,6 @@ from models.timesheet import (
     KimaiTimesheetEntity,
 )
 from models.user import KimaiUser
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -100,30 +99,25 @@ class KimaiService:
         @return
         List[KimaiActivity]: A list of activities.
         """
-        logger.info("Loading activities from local context file.")
+        url = f"{self.__api_url}/activities"
+        valid_params = None
 
-        if os.path.exists(f"{CONTEXT_PATH}/kimai_activities.json"):
+        if os.path.exists(f"{CONTEXT_PATH}/kimai_activities.json") and not params:
             try:
                 with open(
                     f"{CONTEXT_PATH}/kimai_activities.json", "r", encoding="utf-8"
                 ) as f:
                     data = json.load(f)
-
-                if isinstance(data, list):
-                    logger.info("Loaded activities from local context file.")
-                    return [KimaiActivity(**activity) for activity in data]
+                logger.info("Loaded activities from local context file.")
+                return [KimaiActivity(**activity) for activity in data]
             except Exception as e:
                 logger.error(
                     f"Failed to load activities from local context file. Error: {e}"
                 )
         else:
             try:
-                logger.info("Fetching activities from Kimai API.")
-                url = f"{self.__api_url}/activities"
-                valid_params = None
                 if params:
                     valid_params = IKimaiFetchActivitiesParams(**params)
-
                 response = requests.get(
                     url,
                     headers=self.__request_headers.as_headers(),
@@ -241,33 +235,25 @@ class KimaiService:
         @return
         List[KimaiTimesheetCollection]: The list of available timesheets of the user.
         """
+        url = f"{self.__api_url}/timesheets"
+        valid_params = None
 
         local_context_file = f"{CONTEXT_PATH}/kimai_timesheets.json"
-        logger.info("Attempting to load timesheets from local context file.")
-        if os.path.exists(local_context_file):
+        if os.path.exists(local_context_file) and not params:
+            logger.info("Attempting to load timesheets from local context file.")
             try:
                 if os.path.exists(local_context_file):
                     with open(local_context_file, "r", encoding="utf-8") as f:
                         response_data = json.load(f)
-
-                    if isinstance(response_data, list):
-                        logger.info("Loaded timesheets from local context file.")
-                        return [
-                            KimaiTimesheetCollection(**timesheet)
-                            for timesheet in response_data
-                        ]
+                    logger.info("Loaded timesheets from local context file.")
             except Exception as e:
                 logger.error(
                     f"Failed to load timesheets from local context file. Error: {e}"
                 )
         else:
             try:
-                logger.info("Fetching timesheets from Kimai API.")
-                url = f"{self.__api_url}/timesheets"
-                valid_params = None
                 if params:
                     valid_params = IKimaiFetchTimesheetsParams(**params)
-
                 response = requests.get(
                     url,
                     headers=self.__request_headers.as_headers(),
@@ -276,15 +262,11 @@ class KimaiService:
                     else None,
                 )
                 response.raise_for_status()
-
                 response_data = response.json()
-
-                return [
-                    KimaiTimesheetCollection(**timesheet) for timesheet in response_data
-                ]
             except Exception as e:
                 logger.error(f"Failed to fetch timesheets from Kimai API. Error: {e}")
-        return []
+
+        return [KimaiTimesheetCollection(**timesheet) for timesheet in response_data]
 
     def get_timesheet(self, id: int) -> KimaiTimesheetEntity:
         """
@@ -293,6 +275,7 @@ class KimaiService:
         @return
         KimaiTimesheetEntity: The timesheet whose id matches.
         """
+        url = f"{self.__api_url}/timesheets/{id}"
 
         local_context_file = f"{CONTEXT_PATH}/kimai_timesheets.json"
         logger.info("Attempting to load timesheet from local context file.")
@@ -317,13 +300,11 @@ class KimaiService:
                     url, headers=self.__request_headers.as_headers()
                 )
                 response.raise_for_status()
-
                 response_data = response.json()
-
-                return KimaiTimesheetEntity(**response_data)
             except Exception as e:
                 logger.error(f"Failed to fetch timesheet from Kimai API. Error: {e}")
-        return KimaiTimesheetEntity()
+
+        return KimaiTimesheetEntity(**response_data)
 
     def get_recent_timesheets(
         self, params: Optional[Dict[str, Any]]
@@ -396,16 +377,36 @@ class KimaiService:
         @return
         KimaiTimesheetEntity: The created timesheet.
         """
+        if isinstance(timesheet.project, str):
+            timesheet.project = int(
+                self.get_ids({"project": timesheet.project})["project"]
+            )
+        if isinstance(timesheet.activity, str):
+            timesheet.activity = int(
+                self.get_ids({"activity": timesheet.activity})["activity"]
+            )
+
+        # Convert begin and end to ISO 8601 format with timezone info
+        timesheet.begin = timesheet.begin.astimezone(timezone.utc)
+        if timesheet.end:
+            timesheet.end = timesheet.end.astimezone(timezone.utc)
+
         url = f"{self.__api_url}/timesheets"
 
-        response = requests.post(
-            url,
-            headers=self.__request_headers.as_headers(),
-            json=timesheet.model_dump(exclude_none=True),
-        )
-        response.raise_for_status()
+        try:
+            response = requests.post(
+                url,
+                headers=self.__request_headers.as_headers(),
+                json=timesheet.model_dump(exclude_none=True),
+            )
+            response.raise_for_status()
 
-        response_data = response.json()
+            response_data = response.json()
+
+        except Exception as e:
+            logger.error(f"Failed to create timesheet in Kimai API. Error: {e}")
+            logger.error(f"{response.text}")
+            raise e
 
         return KimaiTimesheetEntity(**response_data)
 
@@ -446,7 +447,56 @@ class KimaiService:
         url = f"{self.__api_url}/timesheets/{id}"
 
         response = requests.delete(url, headers=self.__request_headers.as_headers())
-
         response.raise_for_status()
 
         return None
+
+    def get_ids(self, fetch: Dict[str, str]) -> Dict[str, str]:
+        """
+        Fetches IDs for various entities based on provided names.
+
+        @param
+        fetch[Dict[str, str]]: A dictionary with entity types as keys and names as values.
+
+        @return
+        Dict[str, int]: A dictionary with entity types as keys and their corresponding IDs as values.
+        """
+
+        for entity_type, name in fetch.items():
+            if entity_type == "":
+                del fetch[entity_type]
+                continue
+            if entity_type == "project":
+                if os.path.exists(f"{CONTEXT_PATH}/kimai_projects.json"):
+                    with open(
+                        f"{CONTEXT_PATH}/kimai_projects.json", "r", encoding="utf-8"
+                    ) as f:
+                        projects_data = json.load(f)
+                    for project in projects_data:
+                        if project.get("name").lower() == name.lower():
+                            fetch["project"] = project.get("id")
+                            break
+            if entity_type == "activity":
+                if os.path.exists(f"{CONTEXT_PATH}/kimai_activities.json"):
+                    with open(
+                        f"{CONTEXT_PATH}/kimai_activities.json", "r", encoding="utf-8"
+                    ) as f:
+                        activities_data = json.load(f)
+                    for activity in activities_data:
+                        if activity.get("name").lower() == name.lower() and fetch.get(
+                            "project"
+                        ) == activity.get("project"):
+                            fetch["activity"] = activity.get("id")
+                            break
+            if entity_type == "customer":
+                if os.path.exists(f"{CONTEXT_PATH}/kimai_customers.json"):
+                    with open(
+                        f"{CONTEXT_PATH}/kimai_customers.json", "r", encoding="utf-8"
+                    ) as f:
+                        customers_data = json.load(f)
+                    for customer in customers_data:
+                        if customer.get("name").lower() == name.lower():
+                            fetch["customer"] = customer.get("id")
+                            break
+
+        return fetch

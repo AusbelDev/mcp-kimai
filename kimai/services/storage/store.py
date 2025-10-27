@@ -32,6 +32,13 @@ class I_Storage(ABC):
     """
     pass
 
+  @abstractmethod
+  def file_exists(self, path: str) -> bool:
+    """
+    Evaluates if a file actually exists.
+    """
+    pass
+
 # class S3Storage(I_Storage):
 #   s3_client = boto3.client("s3")
 #   s3_bucket: str
@@ -92,6 +99,11 @@ class DiskStorage(I_Storage):
   def reads(self, path: str) -> str:
     return "\n".join(self.read(path)).strip()
 
+  def file_exists(self, path: str) -> bool:
+    path = self.root_path + path
+
+    return os.path.exists(path)
+
 class StorageService:
   store_env: Store_Type
   store: I_Storage
@@ -119,6 +131,9 @@ class StorageService:
     data: Mapping[str, Any] = json.loads(content)
 
     return data
+
+  def file_exists(self, path: str) -> bool:
+    return self.store.file_exists(path)
 
 # class S3StorageService(StorageService):
 #   s3_bucket: str

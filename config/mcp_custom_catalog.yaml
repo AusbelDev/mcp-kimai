@@ -1,0 +1,48 @@
+version: 2
+name: custom
+displayName: Custom MCP Servers
+registry:
+  kimai:
+    description: "List and manage activities on your Kimai instance."
+    title: "KimAI"
+    type: server
+    dateAdded: "2025-10-10T00:00:00Z"
+    image: kimAI/dev:latest
+    ref: ""
+    readme: ""
+    toolsUrl: ""
+    source: ""
+    upstream: ""
+    icon: ""
+    volumes:
+      - "${MCP_PERSISTENT_STORE}:/app/mcp_context:rw"
+    tools:
+      - name: kimai_ping
+      - name: kimai_version
+      - name: kimai_list_activities
+      - name: kimai_get_activity
+      - name: kimai_create_activity
+      - name: kimai_update_activity
+      - name: kimai_set_activity_meta
+    env:
+      - name: KIMAI_USER
+        value: "${KIMAI_USER}"
+      - name: KIMAI_TOKEN
+        value: "${KIMAI_TOKEN}"
+      - name: KIMAI_BASE_URL
+        value: "${KIMAI_BASE_URL}"
+      - name: MCP_HTTP_TRANSPORT
+        value: "stdio"
+      - name: MCP_PORT
+        value: ${MCP_PORT}
+      - name: MCP_SERVER_NAME
+        value: ${MCP_SERVER_NAME}
+
+    metadata:
+      category: integration
+      tags:
+        - kimai
+        - time-tracking
+        - activities
+      license: MIT
+      owner: local
