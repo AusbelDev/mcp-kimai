@@ -205,6 +205,9 @@ async def kimai_create_timesheet(timesheet: KimaiTimesheet) -> KimaiTimesheetEnt
         activity: int
         description: Optional[str] = None
 
+    Begin and end must be provided in ISO 8601 format with UTC timezone info, e.g.,
+    "2024-10-01T14:30:00+00:00". The system will handle conversion to local time if needed.
+
     @return
     KimaiTimesheetEntity: The created timesheet.
     """

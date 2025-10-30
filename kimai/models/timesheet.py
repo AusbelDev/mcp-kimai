@@ -8,7 +8,30 @@ from models.activity import KimaiActivityDetails
 from models.misc import KimaiMetaPairValue
 from pydantic import BaseModel, field_serializer, model_validator
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _to_utc_iso(dt: datetime, env_tz: str) -> str:
+    """Normalize a datetime (naive or aware) to UTC and return ISO-8601."""
+    if dt.tzinfo is None:
+        tz = pytz.timezone(env_tz)
+        # Localize with DST awareness
+        try:
+            aware = tz.localize(
+                dt, is_dst=None
+            )  # let pytz determine DST; raises on edge cases
+        except pytz.AmbiguousTimeError:
+            # Fall back to standard time (is_dst=False) if time is ambiguous (fall-back hour)
+            aware = tz.localize(dt, is_dst=False)
+        except pytz.NonExistentTimeError:
+            # If the time never occurred (spring-forward gap), bump 1 hour and mark DST
+            aware = tz.localize(dt + timedelta(hours=1), is_dst=True)
+    else:
+        aware = dt
+
+    utc_dt = aware.astimezone(timezone.utc)
+    return utc_dt.isoformat()
 
 
 # FIXME: Doesnt load the dotenv variables here, so MCP_TIMEZONE is not found
@@ -85,14 +108,44 @@ class KimaiTimesheet(BaseModel):
 
     @field_serializer("begin", "end")
     def datetimes_to_iso(self, value: Optional[datetime]) -> Optional[str]:
-        _timezone = os.environ.get("MCP_TIMEZONE", "America/Mexico_City")
-        local_dt = datetime.now(pytz.timezone(_timezone))
-        utco = local_dt.utcoffset() or timedelta(0)
-        hours_offset = int(utco.total_seconds() // 3600)
+        if value is None:
+            return None
 
-        logger.info(
-            f"TZ: {_timezone}, Timezone offset hours: {hours_offset}, UTC time: {datetime.now(timezone.utc)}, Local time: {datetime.now(pytz.timezone(_timezone))}"
-        )
-        if value:
-            return (value - timedelta(hours=hours_offset)).isoformat()
-        return None
+        tz_env = os.environ.get("MCP_TIMEZONE", "America/Mexico_City")
+
+        try:
+            iso_utc = _to_utc_iso(value, tz_env)
+
+            tz = pytz.timezone(tz_env)
+            local_now = datetime.now(tz)
+            utc_now = datetime.now(timezone.utc)
+            utcoffset = local_now.utcoffset() or timedelta(0)
+            hours_offset = int(utcoffset.total_seconds() // 3600)
+
+            iso_utc_dt = datetime.fromisoformat(iso_utc)
+            if abs(hours_offset) > 0:
+                if hours_offset > 0:
+                    corrected_value = iso_utc_dt - timedelta(hours=hours_offset)
+                elif hours_offset < 0:
+                    corrected_value = iso_utc_dt + timedelta(hours=abs(hours_offset))
+            else:
+                corrected_value = iso_utc_dt
+
+            logger.info(
+                "Serialized datetime to UTC. "
+                f"ENV_TZ={tz_env}, offset_hours={hours_offset}, "
+                f"input={value!r}, output_utc={iso_utc}, "
+                f"now_utc={utc_now.isoformat()}, now_local={local_now.isoformat()}, "
+                f"Corrected value={corrected_value if abs(hours_offset) > 0 else 'N/A'}"
+            )
+
+            return corrected_value.isoformat() if abs(hours_offset) > 0 else iso_utc
+
+        except Exception:
+            logger.exception(
+                "Failed to convert datetime to UTC; returning best-effort value."
+            )
+            # Best-effort fallback: if value is aware, at least convert that to UTC
+            if value.tzinfo is not None:
+                return value.astimezone(timezone.utc).isoformat()
+            return None

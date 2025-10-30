@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-from datetime import timezone
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -385,11 +384,6 @@ class KimaiService:
             timesheet.activity = int(
                 self.get_ids({"activity": timesheet.activity})["activity"]
             )
-
-        # Convert begin and end to ISO 8601 format with timezone info
-        timesheet.begin = timesheet.begin.astimezone(timezone.utc)
-        if timesheet.end:
-            timesheet.end = timesheet.end.astimezone(timezone.utc)
 
         url = f"{self.__api_url}/timesheets"
 
