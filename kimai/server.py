@@ -15,9 +15,11 @@ from models.timesheet import (
     KimaiTimesheetCollection,
     KimaiTimesheetCollectionDetails,
     KimaiTimesheetEntity,
+    KimaiTimesheetNonUTC,
 )
 from requests.models import HTTPError
 from services.kimai.kimai import KimaiService
+from services.outlook.outlook_events import OutlookService
 from services.storage.store import DiskStorageService
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
@@ -32,6 +34,7 @@ dotenv.load_dotenv()
 
 mcp = FastMCP(os.getenv("MCP_SERVER_NAME", "Kimai-MCP"))
 kimai_service = KimaiService.get_instance()
+outlook_service = OutlookService()
 storage_service = DiskStorageService("./mcp_context/")
 
 
@@ -135,6 +138,23 @@ async def kimai_version() -> KimaiVersion:
 
 
 @mcp.tool()
+async def kimai_user_server_config() -> Dict[str, Any]:
+    """
+    Fetches current Kimai user server configuration.
+
+    @return
+    Dict[str, Any]: Object representing the current user server config.
+    """
+    try:
+        response = kimai_service.user_server_config()
+
+        return response
+    except HTTPError as err:
+        logger.error(err)
+        return err.response.json()
+
+
+@mcp.tool()
 async def kimai_list_activities() -> List[KimaiActivity]:
     """
     List available activities for the user.
@@ -205,6 +225,52 @@ async def kimai_create_timesheet(timesheet: KimaiTimesheet) -> KimaiTimesheetEnt
         activity: int
         description: Optional[str] = None
 
+
+    Begin and end must be provided in ISO 8601 format with UTC timezone info, e.g.,
+    "2024-10-01T14:30:00+00:00". The system will handle conversion to local time if needed.
+
+    @return
+    KimaiTimesheetEntity: The created timesheet.
+    """
+    beginAndendInUTCtimezone = False
+    logger.info(
+        f"Timesheet begin timezone info: {timesheet.begin.tzinfo}, offset: {timesheet.begin.utcoffset()}"
+    )
+    if timesheet.begin.utcoffset() == 0:
+        beginAndendInUTCtimezone = True
+
+    if beginAndendInUTCtimezone:
+        try:
+            response = kimai_service.create_timesheet(timesheet)
+
+            return response
+        except HTTPError as err:
+            logger.error(err)
+            return err.response.json()
+    else:
+        try:
+            response = kimai_service.create_timesheet_not_utc(timesheet)
+            return response
+        except HTTPError as err:
+            logger.error(err)
+            return err.response.json()
+
+
+@mcp.tool()
+async def kimai_create_outlook_timesheet(
+    timesheet: KimaiTimesheetNonUTC,
+) -> KimaiTimesheetEntity:
+    """
+    Creates the provided timesheet in the system. This is specifically for Outlook events.
+
+    @param
+    timesheet[KimaiTimesheet]: The activity to be created.
+        begin: datetime
+        end: Optional[datetime] = None
+        project: int
+        activity: int
+        description: Optional[str] = None
+
     Begin and end must be provided in ISO 8601 format with UTC timezone info, e.g.,
     "2024-10-01T14:30:00+00:00". The system will handle conversion to local time if needed.
 
@@ -212,7 +278,7 @@ async def kimai_create_timesheet(timesheet: KimaiTimesheet) -> KimaiTimesheetEnt
     KimaiTimesheetEntity: The created timesheet.
     """
     try:
-        response = kimai_service.create_timesheet(timesheet)
+        response = kimai_service.create_outlook_timesheet(timesheet)
 
         return response
     except HTTPError as err:
@@ -349,6 +415,23 @@ def kimai_get_ids(
     ids = kimai_service.get_ids(fetch_ids)
 
     return {k: str(v) for k, v in ids.items()}
+
+
+@mcp.tool()
+def kimai_get_outlook_events(start: datetime, end: datetime) -> List[Dict[str, Any]]:
+    """
+    Fetches Outlook calendar events between the provided start and end datetimes.
+
+    @param
+    start[datetime]: The start datetime in ISO 8601 format with timezone info.
+    end[datetime]: The end datetime in ISO 8601 format with timezone info.
+
+    @return
+    List[Dict[str, Any]]: A list of Outlook calendar events.
+    """
+    events = outlook_service.get_outlook_events(start, end)
+
+    return events
 
 
 @mcp.resource("file://kimai_activities.json")

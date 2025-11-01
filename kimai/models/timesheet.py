@@ -110,7 +110,6 @@ class KimaiTimesheet(BaseModel):
     def datetimes_to_iso(self, value: Optional[datetime]) -> Optional[str]:
         if value is None:
             return None
-
         tz_env = os.environ.get("MCP_TIMEZONE", "America/Mexico_City")
 
         try:
@@ -138,7 +137,6 @@ class KimaiTimesheet(BaseModel):
                 f"now_utc={utc_now.isoformat()}, now_local={local_now.isoformat()}, "
                 f"Corrected value={corrected_value if abs(hours_offset) > 0 else 'N/A'}"
             )
-
             return corrected_value.isoformat() if abs(hours_offset) > 0 else iso_utc
 
         except Exception:
@@ -149,3 +147,17 @@ class KimaiTimesheet(BaseModel):
             if value.tzinfo is not None:
                 return value.astimezone(timezone.utc).isoformat()
             return None
+
+
+class KimaiTimesheetNonUTC(BaseModel):
+    begin: datetime
+    end: Optional[datetime] = None
+    project: int
+    activity: int
+    description: Optional[str] = None
+
+    @field_serializer("begin", "end")
+    def datetimes_to_iso(self, value: Optional[datetime]) -> Optional[str]:
+        if value is None:
+            return None
+        return value.isoformat()

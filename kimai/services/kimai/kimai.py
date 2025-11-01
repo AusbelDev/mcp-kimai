@@ -19,6 +19,7 @@ from models.timesheet import (
     KimaiTimesheetCollection,
     KimaiTimesheetCollectionDetails,
     KimaiTimesheetEntity,
+    KimaiTimesheetNonUTC,
 )
 from models.user import KimaiUser
 
@@ -84,6 +85,22 @@ class KimaiService:
         data = response.json()
 
         return data.get("message")
+
+    def user_server_config(self) -> Dict[str, Any]:
+        """
+        Fetches current Kimai user server configuration.
+
+        @return
+        Dict[str, Any]: Object representing the current user server config.
+        """
+        url = f"{self.__api_url}/config/i18n"
+
+        response = requests.get(url, headers=self.__request_headers.as_headers())
+        response.raise_for_status()
+
+        data = response.json()
+
+        return data
 
     def get_activities(
         self, params: Optional[Dict[str, Any]] = None
@@ -369,6 +386,86 @@ class KimaiService:
     def create_timesheet(self, timesheet: KimaiTimesheet) -> KimaiTimesheetEntity:
         """
         Creates the provided timesheet in the system.
+
+        @param
+        timesheet[KimaiTimesheet]: The activity to be created.
+
+        @return
+        KimaiTimesheetEntity: The created timesheet.
+        """
+        if isinstance(timesheet.project, str):
+            timesheet.project = int(
+                self.get_ids({"project": timesheet.project})["project"]
+            )
+        if isinstance(timesheet.activity, str):
+            timesheet.activity = int(
+                self.get_ids({"activity": timesheet.activity})["activity"]
+            )
+
+        url = f"{self.__api_url}/timesheets"
+
+        try:
+            response = requests.post(
+                url,
+                headers=self.__request_headers.as_headers(),
+                json=timesheet.model_dump(exclude_none=True),
+            )
+            response.raise_for_status()
+
+            response_data = response.json()
+
+        except Exception as e:
+            logger.error(f"Failed to create timesheet in Kimai API. Error: {e}")
+            logger.error(f"{response.text}")
+            raise e
+
+        return KimaiTimesheetEntity(**response_data)
+
+    def create_timesheet_not_utc(
+        self, timesheet: KimaiTimesheetNonUTC
+    ) -> KimaiTimesheetEntity:
+        """
+        Creates the provided timesheet in the system. This is specifically for non-UTC times.
+
+        @param
+        timesheet[KimaiTimesheetNonUTC]: The activity to be created.
+
+        @return
+        KimaiTimesheetEntity: The created timesheet.
+        """
+        if isinstance(timesheet.project, str):
+            timesheet.project = int(
+                self.get_ids({"project": timesheet.project})["project"]
+            )
+        if isinstance(timesheet.activity, str):
+            timesheet.activity = int(
+                self.get_ids({"activity": timesheet.activity})["activity"]
+            )
+
+        url = f"{self.__api_url}/timesheets"
+
+        try:
+            response = requests.post(
+                url,
+                headers=self.__request_headers.as_headers(),
+                json=timesheet.model_dump(exclude_none=True),
+            )
+            response.raise_for_status()
+
+            response_data = response.json()
+
+        except Exception as e:
+            logger.error(f"Failed to create timesheet in Kimai API. Error: {e}")
+            logger.error(f"{response.text}")
+            raise e
+
+        return KimaiTimesheetEntity(**response_data)
+
+    def create_outlook_timesheet(
+        self, timesheet: KimaiTimesheetNonUTC
+    ) -> KimaiTimesheetEntity:
+        """
+        Creates the provided timesheet in the system. This is specifically for Outlook events.
 
         @param
         timesheet[KimaiTimesheet]: The activity to be created.
