@@ -1,8 +1,10 @@
 .env
 .docker/
 mcp_context/
+outlook_events/
 pyproject.toml
 uv.lock
+.msal_token_cache.bin
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

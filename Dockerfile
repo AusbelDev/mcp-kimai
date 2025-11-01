@@ -11,6 +11,7 @@ COPY kimai/ kimai/
 
 RUN useradd -m -u 1000 mcpuser 
 RUN chown -R mcpuser:mcpuser /app
+RUN mkdir -p /home/mcpuser/.config/msal
 
 # Run the server
 USER mcpuser
