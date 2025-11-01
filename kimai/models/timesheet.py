@@ -103,10 +103,6 @@ class KimaiTimesheet(BaseModel):
     activity: int
     description: Optional[str] = None
 
-    # @field_serializer("tags")
-    # def join_tags(self, value) -> str:
-    #     return ",".join(value)
-
     @field_serializer("begin", "end")
     def datetimes_to_iso(self, value: Optional[datetime]) -> Optional[str]:
         if value is None:

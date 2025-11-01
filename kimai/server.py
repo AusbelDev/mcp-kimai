@@ -232,28 +232,14 @@ async def kimai_create_timesheet(timesheet: KimaiTimesheet) -> KimaiTimesheetEnt
     @return
     KimaiTimesheetEntity: The created timesheet.
     """
-    beginAndendInUTCtimezone = False
-    logger.info(
-        f"Timesheet begin timezone info: {timesheet.begin.tzinfo}, offset: {timesheet.begin.utcoffset()}"
-    )
-    if timesheet.begin.utcoffset() == 0:
-        beginAndendInUTCtimezone = True
 
-    if beginAndendInUTCtimezone:
-        try:
-            response = kimai_service.create_timesheet(timesheet)
+    try:
+        response = kimai_service.create_timesheet(timesheet)
 
-            return response
-        except HTTPError as err:
-            logger.error(err)
-            return err.response.json()
-    else:
-        try:
-            response = kimai_service.create_timesheet_not_utc(timesheet)
-            return response
-        except HTTPError as err:
-            logger.error(err)
-            return err.response.json()
+        return response
+    except HTTPError as err:
+        logger.error(err)
+        return err.response.json()
 
 
 @mcp.tool()
