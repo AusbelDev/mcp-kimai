@@ -2,8 +2,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import DefaultDict, Dict, List, Optional, cast
 
-from kimai.models.timesheet import KimaiTimesheetCollection
-from kimai.services.kimai.kimai import KimaiService
+from models.timesheet import KimaiTimesheetCollection
+from services.kimai.kimai import KimaiService
 
 kimai_service = KimaiService.get_instance()
 

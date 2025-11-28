@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
+import dotenv
 import requests
 from models.activity import KimaiActivity, KimaiActivityEntity, KimaiActivityForm
 from models.customer import KimaiCustomer
@@ -26,6 +27,7 @@ from models.user import KimaiUser
 logger = logging.getLogger(__name__)
 
 CONTEXT_PATH = "./mcp_context/"
+dotenv.load_dotenv()
 
 
 class KimaiService:
