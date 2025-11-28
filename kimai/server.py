@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, cast
 
 import dotenv
+from common.common import CommonModule
 from fastmcp import FastMCP
 from models.activity import KimaiActivity, KimaiActivityEntity
 from models.customer import KimaiCustomer
@@ -418,6 +419,23 @@ def kimai_get_outlook_events(start: datetime, end: datetime) -> List[Dict[str, A
     events = outlook_service.get_outlook_events(start, end)
 
     return events
+
+
+@mcp.tool()
+def kimai_get_available_times_in_range(begin: datetime, end: datetime):
+    """
+    Returns the available time ranges in a range.
+
+    @params
+    begin[datetime]: The start of the range.
+    end[datetime]: The end of the range.
+
+    @return
+    Dict[str, List[KimaiTimesheetCollection]]: A dictionary consisting of each day
+    in the range with its corresponding list of timesheets.
+    """
+
+    return CommonModule.available_times_in_range(begin, end)
 
 
 @mcp.resource("file://kimai_activities.json")
