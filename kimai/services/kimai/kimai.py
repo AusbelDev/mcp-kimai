@@ -1,9 +1,9 @@
-import requests
-import os
 import json
-
+import logging
+import os
 from typing import Any, Dict, List, Optional
 
+import requests
 from models.activity import KimaiActivity, KimaiActivityEntity, KimaiActivityForm
 from models.customer import KimaiCustomer
 from models.misc import KimaiVersion
@@ -19,10 +19,9 @@ from models.timesheet import (
     KimaiTimesheetCollection,
     KimaiTimesheetCollectionDetails,
     KimaiTimesheetEntity,
+    KimaiTimesheetNonUTC,
 )
 from models.user import KimaiUser
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +85,22 @@ class KimaiService:
         data = response.json()
 
         return data.get("message")
+
+    def user_server_config(self) -> Dict[str, Any]:
+        """
+        Fetches current Kimai user server configuration.
+
+        @return
+        Dict[str, Any]: Object representing the current user server config.
+        """
+        url = f"{self.__api_url}/config/i18n"
+
+        response = requests.get(url, headers=self.__request_headers.as_headers())
+        response.raise_for_status()
+
+        data = response.json()
+
+        return data
 
     def get_activities(
         self, params: Optional[Dict[str, Any]] = None
@@ -378,16 +393,71 @@ class KimaiService:
         @return
         KimaiTimesheetEntity: The created timesheet.
         """
+        if isinstance(timesheet.project, str):
+            timesheet.project = int(
+                self.get_ids({"project": timesheet.project})["project"]
+            )
+        if isinstance(timesheet.activity, str):
+            timesheet.activity = int(
+                self.get_ids({"activity": timesheet.activity})["activity"]
+            )
+
         url = f"{self.__api_url}/timesheets"
 
-        response = requests.post(
-            url,
-            headers=self.__request_headers.as_headers(),
-            json=timesheet.model_dump(exclude_none=True),
-        )
-        response.raise_for_status()
+        try:
+            response = requests.post(
+                url,
+                headers=self.__request_headers.as_headers(),
+                json=timesheet.model_dump(exclude_none=True),
+            )
+            response.raise_for_status()
 
-        response_data = response.json()
+            response_data = response.json()
+
+        except Exception as e:
+            logger.error(f"Failed to create timesheet in Kimai API. Error: {e}")
+            logger.error(f"{response.text}")
+            raise e
+
+        return KimaiTimesheetEntity(**response_data)
+
+    def create_outlook_timesheet(
+        self, timesheet: KimaiTimesheetNonUTC
+    ) -> KimaiTimesheetEntity:
+        """
+        Creates the provided timesheet in the system. This is specifically for Outlook events.
+
+        @param
+        timesheet[KimaiTimesheet]: The activity to be created.
+
+        @return
+        KimaiTimesheetEntity: The created timesheet.
+        """
+        if isinstance(timesheet.project, str):
+            timesheet.project = int(
+                self.get_ids({"project": timesheet.project})["project"]
+            )
+        if isinstance(timesheet.activity, str):
+            timesheet.activity = int(
+                self.get_ids({"activity": timesheet.activity})["activity"]
+            )
+
+        url = f"{self.__api_url}/timesheets"
+
+        try:
+            response = requests.post(
+                url,
+                headers=self.__request_headers.as_headers(),
+                json=timesheet.model_dump(exclude_none=True),
+            )
+            response.raise_for_status()
+
+            response_data = response.json()
+
+        except Exception as e:
+            logger.error(f"Failed to create timesheet in Kimai API. Error: {e}")
+            logger.error(f"{response.text}")
+            raise e
 
         return KimaiTimesheetEntity(**response_data)
 
@@ -431,3 +501,53 @@ class KimaiService:
         response.raise_for_status()
 
         return None
+
+    def get_ids(self, fetch: Dict[str, str]) -> Dict[str, str]:
+        """
+        Fetches IDs for various entities based on provided names.
+
+        @param
+        fetch[Dict[str, str]]: A dictionary with entity types as keys and names as values.
+
+        @return
+        Dict[str, int]: A dictionary with entity types as keys and their corresponding IDs as values.
+        """
+
+        for entity_type, name in fetch.items():
+            if entity_type == "":
+                del fetch[entity_type]
+                continue
+            if entity_type == "project":
+                if os.path.exists(f"{CONTEXT_PATH}/kimai_projects.json"):
+                    with open(
+                        f"{CONTEXT_PATH}/kimai_projects.json", "r", encoding="utf-8"
+                    ) as f:
+                        projects_data = json.load(f)
+                    for project in projects_data:
+                        if project.get("name").lower() == name.lower():
+                            fetch["project"] = project.get("id")
+                            break
+            if entity_type == "activity":
+                if os.path.exists(f"{CONTEXT_PATH}/kimai_activities.json"):
+                    with open(
+                        f"{CONTEXT_PATH}/kimai_activities.json", "r", encoding="utf-8"
+                    ) as f:
+                        activities_data = json.load(f)
+                    for activity in activities_data:
+                        if activity.get("name").lower() == name.lower() and fetch.get(
+                            "project"
+                        ) == activity.get("project"):
+                            fetch["activity"] = activity.get("id")
+                            break
+            if entity_type == "customer":
+                if os.path.exists(f"{CONTEXT_PATH}/kimai_customers.json"):
+                    with open(
+                        f"{CONTEXT_PATH}/kimai_customers.json", "r", encoding="utf-8"
+                    ) as f:
+                        customers_data = json.load(f)
+                    for customer in customers_data:
+                        if customer.get("name").lower() == name.lower():
+                            fetch["customer"] = customer.get("id")
+                            break
+
+        return fetch

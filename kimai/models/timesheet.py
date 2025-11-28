@@ -1,30 +1,51 @@
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, field_serializer, model_validator
-from datetime import datetime
+import logging
+import os
+from datetime import datetime, timedelta, timezone
+from typing import Any, List, Optional
 
+import pytz
+from common.time_normalizer import KimaiBeginNormalizer, NormalizerConfig
 from models.activity import KimaiActivityDetails
 from models.misc import KimaiMetaPairValue
-from models.project import KimaiProject
+from pydantic import BaseModel, field_serializer, model_validator
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
+def _to_utc_iso(dt: datetime, env_tz: str) -> str:
+    """Normalize a datetime (naive or aware) to UTC and return ISO-8601."""
+    if dt.tzinfo is None:
+        tz = pytz.timezone(env_tz)
+        # Localize with DST awareness
+        try:
+            aware = tz.localize(
+                dt, is_dst=None
+            )  # let pytz determine DST; raises on edge cases
+        except pytz.AmbiguousTimeError:
+            # Fall back to standard time (is_dst=False) if time is ambiguous (fall-back hour)
+            aware = tz.localize(dt, is_dst=False)
+        except pytz.NonExistentTimeError:
+            # If the time never occurred (spring-forward gap), bump 1 hour and mark DST
+            aware = tz.localize(dt + timedelta(hours=1), is_dst=True)
+    else:
+        aware = dt
+
+    utc_dt = aware.astimezone(timezone.utc)
+    return utc_dt.isoformat()
+
+
+# FIXME: Doesnt load the dotenv variables here, so MCP_TIMEZONE is not found
 # TODO: Again, find a way to map camelCase to snake_case
 # Hint: Use Pydantic Config (?)
 class KimaiTimesheetEntity(BaseModel):
     activity: Optional[int] = None
     project: Optional[int] = None
-    user: Optional[int] = None
-    tags: List[str] = []
     id: Optional[int] = None
     begin: datetime
     end: Optional[datetime] = None
     duration: Optional[int] = None
     description: Optional[str] = None
-    rate: Optional[float] = None
-    internalRate: Optional[float] = None
-    fixedRate: Optional[int] = None
-    hourlyRate: Optional[float] = None
-    exported: bool
-    billable: bool
     metaFields: List[KimaiMetaPairValue] = []
 
 
@@ -81,19 +102,29 @@ class KimaiTimesheet(BaseModel):
     project: int
     activity: int
     description: Optional[str] = None
-    fixedRate: Optional[str] = None
-    hourlyRate: Optional[str] = None
-    user: Optional[int] = None
-    exported: Optional[bool] = None
-    billable: Optional[bool] = None
-    tags: List[str] = []
-
-    @field_serializer("tags")
-    def join_tags(self, value) -> str:
-        return ",".join(value)
 
     @field_serializer("begin", "end")
     def datetimes_to_iso(self, value: Optional[datetime]) -> Optional[str]:
-        if value:
-            return value.isoformat()
-        return None
+        if value is None:
+            return None
+        tz_env = os.environ.get("MCP_TIMEZONE", "America/Mexico_City")
+
+        norm_utc = KimaiBeginNormalizer(
+            NormalizerConfig(server_tz=tz_env, return_utc=True)
+        )
+
+        return norm_utc.normalize(value).isoformat()
+
+
+class KimaiTimesheetNonUTC(BaseModel):
+    begin: datetime
+    end: Optional[datetime] = None
+    project: int
+    activity: int
+    description: Optional[str] = None
+
+    @field_serializer("begin", "end")
+    def datetimes_to_iso(self, value: Optional[datetime]) -> Optional[str]:
+        if value is None:
+            return None
+        return value.isoformat()
