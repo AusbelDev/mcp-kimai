@@ -269,6 +269,7 @@ class KimaiService:
                     f"Failed to load timesheets from local context file. Error: {e}"
                 )
         else:
+            logger.info("Fetching timesheets from Kimai API.")
             try:
                 if params:
                     valid_params = IKimaiFetchTimesheetsParams(**params)

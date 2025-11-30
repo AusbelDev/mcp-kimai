@@ -1,5 +1,6 @@
-from datetime import datetime,timezone
+from datetime import datetime, timezone
 from typing import Literal, TypeAlias
+
 from pydantic import BaseModel
 
 VisibilityOptions: TypeAlias = Literal["visible", "hidden", "all"]
@@ -23,3 +24,4 @@ class KimaiMetaPairValue(BaseModel):
 
 class MCPContextMeta(BaseModel):
     last_update: datetime = datetime.now(timezone.utc)
+    context_period: str = "month"

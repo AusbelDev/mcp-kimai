@@ -39,32 +39,50 @@ outlook_service = OutlookService()
 storage_service = DiskStorageService("./mcp_context/")
 
 
-def get_meta() -> Any:
+def get_meta(update_now: bool = False) -> Any:
     meta = None
     difference = 0
 
     try:
         meta = MCPContextMeta(**storage_service.read_json("mcp_context_meta.json"))
-        difference = (
-            datetime.now(timezone.utc) - meta.last_update.astimezone(timezone.utc)
-        ).days
+        # check if the month has changed since last update
+        meta_month = meta.last_update.month
+        current_month = datetime.now(timezone.utc).month
 
-        logger.error(
+        if meta_month != current_month:
+            update_now = True
+
+        # Calculate the number of days since last update
+        difference = (datetime.now(timezone.utc) - meta.last_update).days
+        logger.info(
             f"MCP context already existing. It's been {difference} day{'s' if difference != 1 else ''} since last download"
         )
 
     except Exception as err:
         logger.error(f"{err}")
 
-    if meta and difference <= 7:
+    if meta and not update_now:
         # Return a json if the meta exists and is less than a week old
         return {"meta": meta}
-    logger.error("Automatically downloading most recent context.")
+
+    if update_now:
+        period_begin = datetime(
+            datetime.now().year, datetime.now().month, 1, tzinfo=timezone.utc
+        )
+        period_end = datetime.now(timezone.utc)
+        params = {
+            "begin": period_begin.isoformat(),
+            "end": period_end.isoformat(),
+            "size": "500",
+        }
+        logger.info(
+            f"Downloading latest Kimai MCP context data. From {params.get('begin')} to {params.get('end')}"
+        )
 
     activities = kimai_service.get_activities()
     customers = kimai_service.get_customers()
     tags = kimai_service.get_tags()
-    timesheets = kimai_service.get_timesheets()
+    timesheets = kimai_service.get_timesheets(params=params if params else None)
     projects = kimai_service.get_projects()
 
     timesheet_descs = [
@@ -97,6 +115,20 @@ def get_meta() -> Any:
     )
 
     return meta
+
+
+@mcp.tool()
+def kimai_context_download(update_now: bool = False) -> Any:
+    """
+    Downloads latest metafile info such as activities, customers, projects, user
+    timesheets, tags and descriptions.
+
+    @param
+    update_now[bool]: Whether to force update the context even if it's recent.
+    """
+    response = get_meta(update_now)
+
+    return response
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -368,17 +400,6 @@ async def kimai_get_timesheet(id: int) -> KimaiTimesheetEntity:
 
 
 @mcp.tool()
-def kimai_context_download():
-    """
-    Downloads latest metafile info such as activities, customers, projects, user
-    timesheets, tags and descriptions.
-    """
-    response = get_meta()
-
-    return response
-
-
-@mcp.tool()
 def kimai_get_ids(
     customer: str = "", project: str = "", activity: str = ""
 ) -> Dict[str, str]:
@@ -557,7 +578,6 @@ if __name__ == "__main__":
     PORT = os.getenv("PORT", 8000)
 
     try:
-        get_meta()
         match HTTP_TRANSPORT:
             case "http":
                 mcp.run(transport=HTTP_TRANSPORT, port=int(PORT))

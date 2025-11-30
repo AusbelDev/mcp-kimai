@@ -61,6 +61,7 @@ class KimaiTimesheetCollection(BaseModel):
     description: Optional[str] = None
     rate: Optional[int] = None
     internal_rate: Optional[int] = None
+    size: Optional[int] = None
     exported: bool
     billable: bool
     meta_fields: List[KimaiMetaPairValue] = []
